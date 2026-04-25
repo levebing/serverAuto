@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器巡检系统 - 巡检记录列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+        }
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            z-index: -4;
+            animation: gradient-shift 15s ease infinite;
+        }
+        @keyframes gradient-shift {
+            0% {
+                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            }
+            33% {
+                background: linear-gradient(135deg, #1a1a2e 0%, #4a4a8a 50%, #16213e 100%);
+            }
+            66% {
+                background: linear-gradient(135deg, #0d0d1a 0%, #5a4a9a 50%, #1f1f3a 100%);
+            }
+            100% {
+                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            }
+        }
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            background-image: 
+                linear-gradient(rgba(102, 126, 234, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(102, 126, 234, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 20s linear infinite;
+        }
+        @keyframes grid-move {
+            0% {
+                transform: translate(0, 0);
+            }
+            100% {
+                transform: translate(50px, 50px);
+            }
+        }
+        .bg-glow-1, .bg-glow-2, .bg-glow-3 {
+            position: fixed;
+            border-radius: 50%;
+            opacity: 0.4;
+            filter: blur(80px);
+            z-index: -3;
+            animation: glow-float 20s ease-in-out infinite;
+        }
+        .bg-glow-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #667eea 0%, transparent 70%);
+            top: -150px;
+            right: -150px;
+            animation-delay: 0s;
+        }
+        .bg-glow-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #764ba2 0%, transparent 70%);
+            bottom: -100px;
+            left: -100px;
+            animation-delay: 7s;
+        }
+        .bg-glow-3 {
+            width: 350px;
+            height: 350px;
+            background: radial-gradient(circle, #f093fb 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: 14s;
+        }
+        @keyframes glow-float {
+            0%, 100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.3;
+            }
+            25% {
+                transform: translate(50px, -30px) scale(1.1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: translate(30px, 50px) scale(0.9);
+                opacity: 0.4;
+            }
+            75% {
+                transform: translate(-30px, 30px) scale(1.05);
+                opacity: 0.45;
+            }
+        }
+        .snow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        .snowflake {
+            position: absolute;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+            border-radius: 50%;
+            animation: snowfall linear infinite;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 0 12px rgba(255, 255, 255, 0.3);
+        }
+        .snowflake.small {
+            width: 3px;
+            height: 3px;
+        }
+        .snowflake.medium {
+            width: 5px;
+            height: 5px;
+        }
+        .snowflake.large {
+            width: 8px;
+            height: 8px;
+        }
+        .snowflake.xlarge {
+            width: 12px;
+            height: 12px;
+        }
+        @keyframes snowfall {
+            0% {
+                transform: translateY(-20px) translateX(0) rotate(0deg) scale(0);
+                opacity: 0;
+            }
+            5% {
+                opacity: 1;
+                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+            }
+            25% {
+                transform: translateY(25vh) translateX(var(--sway1, 20px)) rotate(180deg) scale(1);
+            }
+            50% {
+                transform: translateY(50vh) translateX(var(--sway2, -15px)) rotate(360deg) scale(0.9);
+            }
+            75% {
+                transform: translateY(75vh) translateX(var(--sway3, 25px)) rotate(540deg) scale(1);
+            }
+            100% {
+                transform: translateY(105vh) translateX(var(--sway4, -10px)) rotate(720deg) scale(0.8);
+                opacity: 0.3;
+            }
+        }
+        .wind-gust {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
+            animation: wind-blow 8s ease-in-out infinite;
+            opacity: 0;
+        }
+        @keyframes wind-blow {
+            0%, 100% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.5;
+            }
+            50% {
+                transform: translateX(100%);
+                opacity: 0.3;
+            }
+            60% {
+                opacity: 0;
+            }
+        }
+        .sidebar {
+            width: 220px;
+            background: rgba(26, 26, 46, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+        .logo {
+            padding: 0 20px;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            font-size: 18px;
+            color: #fff;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo h1 svg {
+            width: 24px;
+            height: 24px;
+        }
+        .menu {
+            list-style: none;
+        }
+        .menu li {
+            margin-bottom: 4px;
+        }
+        .menu li a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 20px;
+            color: #a0aec0;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+        }
+        .menu li a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            color: #fff;
+            border-left-color: #667eea;
+        }
+        .menu li a.active {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+            border-left-color: #667eea;
+        }
+        .menu li a svg {
+            width: 18px;
+            height: 18px;
+        }
+        .main-content {
+            flex: 1;
+            margin-left: 220px;
+            padding: 24px;
+            position: relative;
+            z-index: 5;
+        }
+        .current-time {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background: rgba(26, 26, 46, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Courier New', monospace;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .header-left h2 {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .header-right {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        .search-bar {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .search-bar select,
+        .search-bar input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .search-bar select:focus,
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .search-bar input::placeholder {
+            color: #a0aec0;
+        }
+        .search-bar button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-search {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .btn-search:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .btn-reset {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        .btn-reset:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .table-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .data-table th {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 14px 16px;
+            text-align: left;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .data-table td {
+            padding: 14px 16px;
+            color: #a0aec0;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .result-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .result-badge.normal {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        .result-badge.alert {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn-download {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-delete {
+            background: #ef4444;
+            color: #fff;
+        }
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+        .pagination {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .pagination-info {
+            color: #a0aec0;
+            font-size: 13px;
+        }
+        .pagination-links {
+            display: flex;
+            gap: 4px;
+        }
+        .pagination-links a {
+            padding: 6px 12px;
+            border-radius: 4px;
+            color: #a0aec0;
+            text-decoration: none;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+        .pagination-links a:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        .pagination-links a.active {
+            background: #667eea;
+            color: #fff;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+        .empty-state a {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+    <div class="bg-grid"></div>
+    <div class="snow-container" id="snowContainer"></div>
+    <div class="wind-gust"></div>
+    
+    <div class="current-time" id="currentTime"></div>
+    
+    <div class="sidebar">
+        <div class="logo">
+            <h1>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                    <line x1="7" y1="2" x2="7" y2="22"></line>
+                    <line x1="17" y1="2" x2="17" y2="22"></line>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                </svg>
+                服务器巡检系统
+            </h1>
+        </div>
+        
+        <ul class="menu">
+            <li>
+                <a href="/">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 21V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path>
+                        <path d="M14 2v4"></path>
+                        <path d="M10 2v4"></path>
+                        <path d="M6 2v4"></path>
+                    </svg>
+                    服务器列表
+                </a>
+            </li>
+            <li>
+                <a href="/records" class="active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    巡检记录
+                </a>
+            </li>
+            <li>
+                <a href="#">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                        <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                    系统设置
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <div class="main-content">
+        <div class="header">
+            <div class="header-left">
+                <h2>📋 巡检记录列表</h2>
+            </div>
+        </div>
+        
+        <div class="search-bar">
+            <select name="group_id" id="group_filter">
+                <option value="all">全部分组</option>
+                {% for group in groups %}
+                <option value="{{ group[0] }}" {{ 'selected' if selected_group == group[0]|string else '' }}>{{ group[1] }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" id="ip_search" placeholder="IP" value="{{ search_ip }}">
+            <button class="btn-search" onclick="search()">搜索</button>
+            <button class="btn-reset" onclick="resetSearch()">重置</button>
+        </div>
+        
+        <div class="table-container">
+            {% if records %}
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>分组</th>
+                        <th>服务名称</th>
+                        <th>巡检结果</th>
+                        <th>巡检时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td>{{ record[13] or '默认分组' }}</td>
+                        <td>{{ record[11] or '未知服务器' }}</td>
+                        <td>
+                            {% set result = record[10] or '未记录' %}
+                            <span class="result-badge {{ 'alert' if '⚠️' in result else 'normal' }}">
+                                {{ result }}
+                            </span>
+                        </td>
+                        <td>{{ record[7] }}</td>
+                        <td>
+                            <div class="action-btns">
+                                <a href="/download_report/{{ record[0] }}" class="action-btn btn-download">下载</a>
+                                <a href="/delete_record/{{ record[0] }}" class="action-btn btn-delete" onclick="return confirm('确定删除该记录？')">删除</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="pagination">
+                <div class="pagination-links">
+                    <a href="#" class="active">1</a>
+                </div>
+                <div class="pagination-info">共 {{ records|length }} 条记录</div>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <h3>暂无巡检记录</h3>
+                <p>前往服务器列表执行巡检</p>
+                <a href="/">立即巡检</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <script>
+        function createSnowflakes() {
+            const container = document.getElementById('snowContainer');
+            const sizes = ['small', 'medium', 'large', 'xlarge'];
+            const flakeCount = 80;
+            
+            for (let i = 0; i < flakeCount; i++) {
+                const snowflake = document.createElement('div');
+                const size = sizes[Math.floor(Math.random() * sizes.length)];
+                snowflake.className = `snowflake ${size}`;
+                
+                snowflake.style.left = Math.random() * 100 + '%';
+                snowflake.style.top = Math.random() * 20 - 20 + '%';
+                
+                const duration = 8 + Math.random() * 12;
+                snowflake.style.animationDuration = duration + 's';
+                snowflake.style.animationDelay = Math.random() * 10 + 's';
+                
+                const swayAmount = 30 + Math.random() * 40;
+                snowflake.style.setProperty('--sway1', (Math.random() * swayAmount - swayAmount/2) + 'px');
+                snowflake.style.setProperty('--sway2', (Math.random() * swayAmount - swayAmount/2) + 'px');
+                snowflake.style.setProperty('--sway3', (Math.random() * swayAmount - swayAmount/2) + 'px');
+                snowflake.style.setProperty('--sway4', (Math.random() * swayAmount - swayAmount/2) + 'px');
+                
+                container.appendChild(snowflake);
+            }
+        }
+        createSnowflakes();
+        
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            const timeStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            document.getElementById('currentTime').textContent = timeStr;
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        function animateSidebarItems() {
+            const menuItems = document.querySelectorAll('.menu li');
+            menuItems.forEach((item, index) => {
+                item.style.opacity = '0';
+                item.style.transform = 'translateX(-20px)';
+                item.style.transition = 'all 0.4s ease';
+                setTimeout(() => {
+                    item.style.opacity = '1';
+                    item.style.transform = 'translateX(0)';
+                }, index * 100 + 200);
+            });
+        }
+        animateSidebarItems();
+        
+        function animateButtons() {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach((btn) => {
+                btn.style.position = 'relative';
+                btn.style.overflow = 'hidden';
+                btn.addEventListener('click', function(e) {
+                    const ripple = document.createElement('span');
+                    const rect = this.getBoundingClientRect();
+                    const size = Math.max(rect.width, rect.height);
+                    const x = e.clientX - rect.left - size / 2;
+                    const y = e.clientY - rect.top - size / 2;
+                    ripple.style.width = ripple.style.height = size + 'px';
+                    ripple.style.left = x + 'px';
+                    ripple.style.top = y + 'px';
+                    ripple.style.position = 'absolute';
+                    ripple.style.borderRadius = '50%';
+                    ripple.style.background = 'rgba(255, 255, 255, 0.3)';
+                    ripple.style.transform = 'scale(0)';
+                    ripple.style.animation = 'ripple 0.6s ease-out';
+                    this.appendChild(ripple);
+                    setTimeout(() => ripple.remove(), 600);
+                });
+            });
+        }
+        animateButtons();
+        
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = `
+            @keyframes ripple {
+                to {
+                    transform: scale(2);
+                    opacity: 0;
+                }
+            }
+            .menu li a:hover {
+                transform: translateX(5px);
+                box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+            }
+            button {
+                transition: all 0.3s ease;
+            }
+            button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            }
+            button:active {
+                transform: translateY(0);
+            }
+            .action-btns a {
+                transition: all 0.3s ease;
+            }
+            .action-btns a:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            }
+        `;
+        document.head.appendChild(styleSheet);
+
+        function search() {
+            const groupId = document.getElementById('group_filter').value;
+            const ip = document.getElementById('ip_search').value;
+            let url = '/records?';
+            if (groupId !== 'all') {
+                url += `group_id=${groupId}`;
+            }
+            if (ip) {
+                url += url.includes('?') ? '&' : '?';
+                url += `ip=${encodeURIComponent(ip)}`;
+            }
+            location.href = url;
+        }
+        
+        function resetSearch() {
+            document.getElementById('group_filter').value = 'all';
+            document.getElementById('ip_search').value = '';
+            location.href = '/records';
+        }
+    </script>
+</body>
+</html>
