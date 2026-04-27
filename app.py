@@ -1,11 +1,18 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response
 from flask_cors import CORS
+<<<<<<< HEAD
 from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order
+=======
+from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
 from inspection import ServerInspector
 import io
 from docx import Document
 from docx.shared import Pt, RGBColor
+<<<<<<< HEAD
 import datetime
+=======
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 app = Flask(__name__)
@@ -209,8 +216,12 @@ def inspect(server_id):
         os_version=result['os_version'],
         alert_content=result['alert_content'],
         report_content=str(result),
+<<<<<<< HEAD
         inspection_result=inspection_result,
         inspection_time=result['inspection_time']
+=======
+        inspection_result=inspection_result
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     )
     
     groups = get_all_groups()
@@ -281,8 +292,12 @@ def inspect_async(server_id):
         os_version=result['os_version'],
         alert_content=result['alert_content'],
         report_content=str(result),
+<<<<<<< HEAD
         inspection_result=inspection_result,
         inspection_time=result['inspection_time']
+=======
+        inspection_result=inspection_result
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     )
     
     return jsonify({
@@ -335,7 +350,11 @@ def download_report(record_id):
 def delete_record(record_id):
     conn = get_connection()
     cursor = conn.cursor()
+<<<<<<< HEAD
     cursor.execute('UPDATE inspection_records SET is_deleted = 1 WHERE id = ?', (record_id,))
+=======
+    cursor.execute('DELETE FROM inspection_records WHERE id = ?', (record_id,))
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     conn.commit()
     conn.close()
     return redirect(url_for('records'))
@@ -374,6 +393,7 @@ def api_update_group():
     else:
         return jsonify({'success': False, 'message': '分组不存在'})
 
+<<<<<<< HEAD
 @app.route('/api/update_group_sort', methods=['POST'])
 def api_update_group_sort():
     group_id = request.json.get('group_id')
@@ -689,6 +709,8 @@ def generate_report_docx(report_content, report_type):
     
     return doc
 
+=======
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
 def get_connection():
     import sqlite3
     from config import DATABASE_PATH

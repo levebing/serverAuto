@@ -311,6 +311,7 @@
             padding: 10px 14px;
             color: #fff;
             font-size: 14px;
+<<<<<<< HEAD
             appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -318,18 +319,23 @@
             background-repeat: no-repeat;
             background-position: right 10px center;
             background-size: 12px;
+=======
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
         }
         .search-bar select:focus,
         .search-bar input:focus {
             outline: none;
             border-color: #667eea;
         }
+<<<<<<< HEAD
         /* 下拉菜单样式 */
         .search-bar select option {
             background: rgba(26, 26, 46, 0.95);
             color: #fff;
             padding: 10px;
         }
+=======
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
         .search-bar input::placeholder {
             color: #a0aec0;
         }
@@ -525,6 +531,7 @@
                 </a>
             </li>
             <li>
+<<<<<<< HEAD
                 <a href="/tasks">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -547,16 +554,23 @@
             </li>
             <li class="has-submenu">
                 <a href="#" class="submenu-toggle">
+=======
+                <a href="#">
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                     系统设置
+<<<<<<< HEAD
                     <span class="submenu-icon">▼</span>
                 </a>
                 <ul class="submenu">
                     <li><a href="/groups">分组管理</a></li>
                 </ul>
+=======
+                </a>
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
             </li>
         </ul>
     </div>
@@ -595,8 +609,13 @@
                 <tbody>
                     {% for record in records %}
                     <tr>
+<<<<<<< HEAD
                         <td>{{ record[14] or '默认分组' }}</td>
                         <td>{{ record[12] or '未知服务器' }}</td>
+=======
+                        <td>{{ record[13] or '默认分组' }}</td>
+                        <td>{{ record[11] or '未知服务器' }}</td>
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
                         <td>
                             {% set result = record[10] or '未记录' %}
                             <span class="result-badge {{ 'alert' if '⚠️' in result else 'normal' }}">
@@ -607,7 +626,11 @@
                         <td>
                             <div class="action-btns">
                                 <a href="/download_report/{{ record[0] }}" class="action-btn btn-download">下载</a>
+<<<<<<< HEAD
                                 <button class="action-btn btn-delete" onclick="deleteRecord({{ record[0] }})")>删除</button>
+=======
+                                <a href="/delete_record/{{ record[0] }}" class="action-btn btn-delete" onclick="return confirm('确定删除该记录？')">删除</a>
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
                             </div>
                         </td>
                     </tr>
@@ -765,12 +788,15 @@
             document.getElementById('ip_search').value = '';
             location.href = '/records';
         }
+<<<<<<< HEAD
         
         function deleteRecord(recordId) {
             if (confirm('确定删除该记录？')) {
                 location.href = '/delete_record/' + recordId;
             }
         }
+=======
+>>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     </script>
 </body>
 </html>
