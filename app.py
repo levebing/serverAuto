@@ -1,18 +1,11 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response
 from flask_cors import CORS
-<<<<<<< HEAD
-from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order
-=======
-from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
+from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count
 from inspection import ServerInspector
 import io
 from docx import Document
 from docx.shared import Pt, RGBColor
-<<<<<<< HEAD
 import datetime
-=======
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 app = Flask(__name__)
@@ -108,21 +101,31 @@ def generate_docx_report(server_name, ip, result):
 def index():
     group_id = request.args.get('group_id', 'all')
     ip = request.args.get('ip', '')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     servers = []
+    total = 0
     if ip:
         servers = search_servers(ip)
+        total = len(servers)
     else:
-        servers = get_all_servers(group_id)
+        servers = get_all_servers(group_id, page, per_page)
+        total = get_servers_count(group_id)
+    total_pages = (total + per_page - 1) // per_page
     groups = get_all_groups()
-    return render_template('index.html', servers=servers, groups=groups, selected_group=group_id, search_ip=ip)
+    return render_template('index.html', servers=servers, groups=groups, selected_group=group_id, search_ip=ip, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/records')
 def records():
     group_id = request.args.get('group_id', 'all')
     ip = request.args.get('ip', '')
-    records = get_inspection_records(group_id=group_id)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    records = get_inspection_records(group_id=group_id, page=page, per_page=per_page)
+    total = get_inspection_records_count(group_id=group_id)
+    total_pages = (total + per_page - 1) // per_page
     groups = get_all_groups()
-    return render_template('records.html', records=records, groups=groups, selected_group=group_id, search_ip=ip)
+    return render_template('records.html', records=records, groups=groups, selected_group=group_id, search_ip=ip, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/add', methods=['GET', 'POST'])
 def add():
@@ -216,12 +219,8 @@ def inspect(server_id):
         os_version=result['os_version'],
         alert_content=result['alert_content'],
         report_content=str(result),
-<<<<<<< HEAD
         inspection_result=inspection_result,
         inspection_time=result['inspection_time']
-=======
-        inspection_result=inspection_result
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     )
     
     groups = get_all_groups()
@@ -292,12 +291,8 @@ def inspect_async(server_id):
         os_version=result['os_version'],
         alert_content=result['alert_content'],
         report_content=str(result),
-<<<<<<< HEAD
         inspection_result=inspection_result,
         inspection_time=result['inspection_time']
-=======
-        inspection_result=inspection_result
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     )
     
     return jsonify({
@@ -350,11 +345,7 @@ def download_report(record_id):
 def delete_record(record_id):
     conn = get_connection()
     cursor = conn.cursor()
-<<<<<<< HEAD
     cursor.execute('UPDATE inspection_records SET is_deleted = 1 WHERE id = ?', (record_id,))
-=======
-    cursor.execute('DELETE FROM inspection_records WHERE id = ?', (record_id,))
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
     conn.commit()
     conn.close()
     return redirect(url_for('records'))
@@ -393,7 +384,6 @@ def api_update_group():
     else:
         return jsonify({'success': False, 'message': '分组不存在'})
 
-<<<<<<< HEAD
 @app.route('/api/update_group_sort', methods=['POST'])
 def api_update_group_sort():
     group_id = request.json.get('group_id')
@@ -413,9 +403,14 @@ def groups():
 
 @app.route('/tasks')
 def tasks():
-    tasks = get_all_scheduled_tasks()
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    tasks = get_all_scheduled_tasks(page, per_page)
+    total = get_scheduled_tasks_count()
+    total_pages = (total + per_page - 1) // per_page
     servers = get_all_servers()
-    return render_template('tasks.html', tasks=tasks, servers=servers)
+    groups = get_all_groups()
+    return render_template('tasks.html', tasks=tasks, servers=servers, groups=groups, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/api/add_task', methods=['POST'])
 def api_add_task():
@@ -465,12 +460,17 @@ def reports():
     filter_type = request.args.get('report_type')
     filter_group = request.args.get('group_id')
     filter_date = request.args.get('date')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
     
     # 获取报告列表
-    reports = get_all_reports(filter_type, filter_group, filter_date)
+    reports = get_all_reports(filter_type, filter_group, filter_date, page, per_page)
+    total = get_reports_count(filter_type, filter_group, filter_date)
+    total_pages = (total + per_page - 1) // per_page
     
     return render_template('reports.html', groups=groups, reports=reports, 
-                           filter_type=filter_type, filter_group=filter_group, filter_date=filter_date)
+                           filter_type=filter_type, filter_group=filter_group, filter_date=filter_date, 
+                           page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/api/generate_report', methods=['POST'])
 def api_generate_report():
@@ -515,15 +515,16 @@ def api_generate_report():
     doc.save(output)
     output.seek(0)
     
-    # 返回文件
-    response = make_response(send_file(
+    # 将文件内容保存到数据库或文件系统
+    # 这里我们返回文件下载响应
+    
+    # 返回文件下载响应
+    return send_file(
         output,
         download_name=filename,
         as_attachment=True,
         mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    ))
-    
-    return response
+    )
 
 def generate_report_content(records, report_type, start_date_str=None):
     """生成报告内容"""
@@ -564,20 +565,38 @@ def generate_report_content(records, report_type, start_date_str=None):
         if start_date <= inspection_time <= end_date:
             filtered_records.append(record)
     
-    # 按服务器分组
+    # 按服务器IP分组
     server_records = {}
+    # 存储所有服务器IP，用于去重
+    server_ips = set()
     for record in filtered_records:
-        server_name = record[9] or record[10]  # 使用服务器名称或IP作为分组键
-        if server_name not in server_records:
-            server_records[server_name] = []
-        server_records[server_name].append(record)
+        # 尝试获取服务器IP
+        server_ip = None
+        if len(record) > 10:
+            for idx in range(9, min(len(record), 15)):
+                if isinstance(record[idx], str):
+                    import re
+                    ip_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
+                    if re.match(ip_pattern, record[idx]):
+                        server_ip = record[idx]
+                        server_ips.add(server_ip)
+                        break
+        
+        # 如果没有找到IP，使用服务器名称或其他标识符
+        if not server_ip:
+            server_ip = record[9] or record[10] or 'unknown'
+            server_ips.add(server_ip)
+        
+        if server_ip not in server_records:
+            server_records[server_ip] = []
+        server_records[server_ip].append(record)
     
     return {
         'title': title,
         'start_date': start_date,
         'end_date': end_date,
         'server_records': server_records,
-        'total_servers': len(server_records),
+        'total_servers': len(server_ips),
         'total_inspections': len(filtered_records)
     }
 
@@ -622,68 +641,81 @@ def generate_report_docx(report_content, report_type):
         
         # 添加表头
         headers = ['序号', '服务器IP', '服务器名称', '巡检时间', 'CPU使用率', '内存使用率', '磁盘使用率', '状态']
-        for i, header in enumerate(headers):
-            table.cell(0, i).text = header
-            table.cell(0, i).paragraphs[0].runs[0].font.bold = True
+        for col_idx, header in enumerate(headers):
+            table.cell(0, col_idx).text = header
+            table.cell(0, col_idx).paragraphs[0].runs[0].font.bold = True
         
         # 添加数据
-        for i, record in enumerate(all_records, 1):
-            table.cell(i, 0).text = str(i)  # 序号
-            # 尝试从记录中获取服务器信息
-            server_ip = '未知'
-            server_name = '未知'
-            
-            # 检查记录长度和内容，尝试找到正确的服务器信息
-            if len(record) > 10:
-                # 尝试不同的索引位置
-                for idx in range(9, min(len(record), 15)):
-                    if isinstance(record[idx], str):
-                        # 检查是否是IP地址
+        for row_idx, record in enumerate(all_records, 1):
+            # 确保行索引不超出表格范围
+            if row_idx < len(table.rows):
+                table.cell(row_idx, 0).text = str(row_idx)  # 序号
+                # 直接使用固定的索引位置获取服务器信息
+                # 根据get_inspection_records函数的SQL查询，返回字段顺序为：
+                # ir.*, s.name as server_name, s.ip as server_ip, g.name as group_name
+                server_ip = '未知'
+                server_name = '未知'
+                
+                # 检查记录长度，确保有足够的字段
+                # 根据get_inspection_records函数的SQL查询，返回字段顺序为：
+                # ir.*(12个字段) + s.name(服务器名称) + s.ip(服务器IP) + g.name(分组名称)
+                if len(record) >= 15:
+                    # 服务器名称在索引12，服务器IP在索引13
+                    if len(record) > 12 and record[12]:
+                        server_name = str(record[12])
+                    if len(record) > 13 and record[13]:
+                        server_ip = str(record[13])
+                
+                # 如果还是没有获取到服务器IP，尝试从记录中提取
+                if server_ip == '未知':
+                    # 尝试从描述字段中提取IP
+                    if len(record) > 4 and isinstance(record[4], str):
                         import re
-                        ip_pattern = r'^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$'
-                        if re.match(ip_pattern, record[idx]):
-                            server_ip = record[idx]
-                        elif not server_name and not re.match(r'^\{.*\}$', record[idx]):  # 不是JSON
-                            server_name = record[idx]
-            
-            table.cell(i, 1).text = server_ip  # 服务器IP
-            table.cell(i, 2).text = server_name  # 服务器名称
-            table.cell(i, 3).text = record[7]  # 巡检时间
-            table.cell(i, 4).text = f"{record[4]}%" if record[4] else '无法获取'  # CPU使用率
-            
-            # 内存使用率
-            memory_usage = '无法获取'
-            if record[3]:
-                try:
-                    mem_info = eval(record[3])
-                    if mem_info.get('usage_percent'):
-                        memory_usage = f"{mem_info['usage_percent']}%"
-                except:
-                    pass
-            table.cell(i, 5).text = memory_usage
-            
-            # 磁盘使用率
-            disk_usage = '无法获取'
-            if record[2]:
-                try:
-                    disk_info = eval(record[2])
-                    if disk_info:
-                        max_usage = max([d.get('usage_percent', 0) for d in disk_info])
-                        disk_usage = f"{max_usage}%"
-                except:
-                    pass
-            table.cell(i, 6).text = disk_usage
-            
-            # 状态
-            status = '正常'
-            if record[8] and record[8] != '无告警':
-                status = '告警'
-            table.cell(i, 7).text = status
-            
-            # 高亮告警行
-            if status == '告警':
-                for j in range(8):
-                    table.cell(i, j).paragraphs[0].runs[0].font.color.rgb = RGBColor(220, 53, 69)
+                        ip_pattern = r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b'
+                        match = re.search(ip_pattern, record[4])
+                        if match:
+                            server_ip = match.group(0)
+                
+                # 确保列索引不超出表格范围
+                if len(table.columns) >= 8:
+                    table.cell(row_idx, 1).text = server_ip  # 服务器IP
+                    table.cell(row_idx, 2).text = server_name  # 服务器名称
+                    table.cell(row_idx, 3).text = record[7]  # 巡检时间
+                    table.cell(row_idx, 4).text = f"{record[4]}%" if record[4] else '无法获取'  # CPU使用率
+                    
+                    # 内存使用率
+                    memory_usage = '无法获取'
+                    if record[3]:
+                        try:
+                            mem_info = eval(record[3])
+                            if mem_info.get('usage_percent'):
+                                memory_usage = f"{mem_info['usage_percent']}%"
+                        except:
+                            pass
+                    table.cell(row_idx, 5).text = memory_usage
+                    
+                    # 磁盘使用率
+                    disk_usage = '无法获取'
+                    if record[2]:
+                        try:
+                            disk_info = eval(record[2])
+                            if disk_info:
+                                max_usage = max([d.get('usage_percent', 0) for d in disk_info])
+                                disk_usage = f"{max_usage}%"
+                        except:
+                            pass
+                    table.cell(row_idx, 6).text = disk_usage
+                    
+                    # 状态
+                    status = '正常'
+                    if record[8] and record[8] != '无告警':
+                        status = '告警'
+                    table.cell(row_idx, 7).text = status
+                    
+                    # 高亮告警行
+                    if status == '告警':
+                        for col_idx in range(8):
+                            table.cell(row_idx, col_idx).paragraphs[0].runs[0].font.color.rgb = RGBColor(220, 53, 69)
         
     # 添加总结
     doc.add_paragraph()
@@ -709,8 +741,6 @@ def generate_report_docx(report_content, report_type):
     
     return doc
 
-=======
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
 def get_connection():
     import sqlite3
     from config import DATABASE_PATH

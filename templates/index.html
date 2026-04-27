@@ -255,7 +255,6 @@
             width: 18px;
             height: 18px;
         }
-<<<<<<< HEAD
         .menu li.has-submenu {
             position: relative;
         }
@@ -273,19 +272,18 @@
         }
         .menu li.has-submenu .submenu {
             position: absolute;
-            left: 100%;
-            top: 0;
-            width: 180px;
+            left: 0;
+            top: 100%;
+            width: 100%;
             background: rgba(26, 26, 46, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 6px 6px 0;
+            border-radius: 0 0 6px 6px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             display: none;
             z-index: 100;
             backdrop-filter: blur(10px);
         }
-        .menu li.has-submenu:hover .submenu,
-        .menu li.has-submenu.active .submenu {
+        .menu li.has-submenu:hover .submenu {
             display: block;
         }
         .menu li.has-submenu .submenu li a {
@@ -297,8 +295,6 @@
             background: rgba(102, 126, 234, 0.2);
             border-left: none;
         }
-=======
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
         .main-content {
             flex: 1;
             margin-left: 220px;
@@ -355,7 +351,6 @@
             padding: 10px 14px;
             color: #fff;
             font-size: 14px;
-<<<<<<< HEAD
             appearance: none;
             -webkit-appearance: none;
             -moz-appearance: none;
@@ -363,23 +358,18 @@
             background-repeat: no-repeat;
             background-position: right 10px center;
             background-size: 12px;
-=======
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
         }
         .search-bar select:focus,
         .search-bar input:focus {
             outline: none;
             border-color: #667eea;
         }
-<<<<<<< HEAD
         /* 下拉菜单样式 */
         .search-bar select option {
             background: rgba(26, 26, 46, 0.95);
             color: #fff;
             padding: 10px;
         }
-=======
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
         .search-bar input::placeholder {
             color: #a0aec0;
         }
@@ -686,7 +676,6 @@
                 </a>
             </li>
             <li>
-<<<<<<< HEAD
                 <a href="/tasks">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -709,23 +698,16 @@
             </li>
             <li class="has-submenu">
                 <a href="#" class="submenu-toggle">
-=======
-                <a href="#">
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                     系统设置
-<<<<<<< HEAD
                     <span class="submenu-icon">▼</span>
                 </a>
                 <ul class="submenu">
                     <li><a href="/groups">分组管理</a></li>
                 </ul>
-=======
-                </a>
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
             </li>
         </ul>
     </div>
@@ -738,6 +720,12 @@
         </div>
         
         <div class="search-bar">
+            <select id="group_filter" onchange="search()">
+                <option value="all" {% if selected_group == 'all' %}selected{% endif %}>全部分组</option>
+                {% for group in groups %}
+                <option value="{{ group[0] }}" {% if selected_group == group[0]|string %}selected{% endif %}>{{ group[1] }}</option>
+                {% endfor %}
+            </select>
             <input type="text" id="ip_search" placeholder="请输入IP" value="{{ search_ip }}">
             <button class="btn-search" onclick="search()">搜索</button>
             <button class="btn-reset" onclick="resetSearch()">重置</button>
@@ -751,6 +739,7 @@
                     <tr>
                         <th>服务名称</th>
                         <th>IP地址</th>
+                        <th>分组</th>
                         <th>端口/用户</th>
                         <th>备注</th>
                         <th>操作</th>
@@ -761,6 +750,7 @@
                     <tr>
                         <td>{{ server[1] }}</td>
                         <td>{{ server[2] }}</td>
+                        <td>{{ server[6] or '-' }}</td>
                         <td>{{ server[3] }}/{{ server[4] }}</td>
                         <td>{{ server[7] or '-' }}</td>
                         <td>
@@ -775,9 +765,17 @@
                 </tbody>
             </table>
             <div class="pagination">
-                <div class="pagination-info">共 {{ servers|length }} 条记录</div>
+                <div class="pagination-info">共 {{ total }} 条记录</div>
                 <div class="pagination-links">
-                    <a href="#" class="active">1</a>
+                    {% if page > 1 %}
+                    <a href="/?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ page-1 }}">上一页</a>
+                    {% endif %}
+                    {% for p in range(1, total_pages+1) %}
+                    <a href="/?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ p }}" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
+                    {% endfor %}
+                    {% if page < total_pages %}
+                    <a href="/?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ page+1 }}">下一页</a>
+                    {% endif %}
                 </div>
             </div>
             {% else %}
@@ -940,8 +938,14 @@
 
         function search() {
             const ip = document.getElementById('ip_search').value;
+            const groupId = document.getElementById('group_filter').value;
             let url = '/?';
-            if (ip) {
+            if (groupId && groupId !== 'all') {
+                url += `group_id=${encodeURIComponent(groupId)}`;
+                if (ip) {
+                    url += `&ip=${encodeURIComponent(ip)}`;
+                }
+            } else if (ip) {
                 url += `ip=${encodeURIComponent(ip)}`;
             }
             location.href = url;
@@ -949,6 +953,7 @@
         
         function resetSearch() {
             document.getElementById('ip_search').value = '';
+            document.getElementById('group_filter').value = 'all';
             location.href = '/';
         }
         

@@ -272,19 +272,18 @@
         }
         .menu li.has-submenu .submenu {
             position: absolute;
-            left: 100%;
-            top: 0;
-            width: 180px;
+            left: 0;
+            top: 100%;
+            width: 100%;
             background: rgba(26, 26, 46, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 6px 6px 0;
+            border-radius: 0 0 6px 6px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             display: none;
             z-index: 100;
             backdrop-filter: blur(10px);
         }
-        .menu li.has-submenu:hover .submenu,
-        .menu li.has-submenu.active .submenu {
+        .menu li.has-submenu:hover .submenu {
             display: block;
         }
         .menu li.has-submenu .submenu li a {

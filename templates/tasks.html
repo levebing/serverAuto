@@ -272,19 +272,18 @@
         }
         .menu li.has-submenu .submenu {
             position: absolute;
-            left: 100%;
-            top: 0;
-            width: 180px;
+            left: 0;
+            top: 100%;
+            width: 100%;
             background: rgba(26, 26, 46, 0.95);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 6px 6px 0;
+            border-radius: 0 0 6px 6px;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
             display: none;
             z-index: 100;
             backdrop-filter: blur(10px);
         }
-        .menu li.has-submenu:hover .submenu,
-        .menu li.has-submenu.active .submenu {
+        .menu li.has-submenu:hover .submenu {
             display: block;
         }
         .menu li.has-submenu .submenu li a {
@@ -789,9 +788,17 @@
                 </tbody>
             </table>
             <div class="pagination">
-                <div class="pagination-info">共 {{ tasks|length }} 条记录</div>
+                <div class="pagination-info">共 {{ total }} 条记录</div>
                 <div class="pagination-links">
-                    <a href="#" class="active">1</a>
+                    {% if page > 1 %}
+                    <a href="/tasks?page={{ page-1 }}">上一页</a>
+                    {% endif %}
+                    {% for p in range(1, total_pages+1) %}
+                    <a href="/tasks?page={{ p }}" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
+                    {% endfor %}
+                    {% if page < total_pages %}
+                    <a href="/tasks?page={{ page+1 }}">下一页</a>
+                    {% endif %}
                 </div>
             </div>
             {% else %}
@@ -956,6 +963,37 @@
             }
             .cron-help p strong {
                 color: #667eea;
+            }
+            /* 分页样式 */
+            .pagination {
+                padding: 16px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
+            .pagination-info {
+                color: #a0aec0;
+                font-size: 13px;
+            }
+            .pagination-links {
+                display: flex;
+                gap: 4px;
+            }
+            .pagination-links a {
+                padding: 6px 12px;
+                border-radius: 4px;
+                color: #a0aec0;
+                text-decoration: none;
+                font-size: 13px;
+                transition: all 0.3s ease;
+            }
+            .pagination-links a:hover {
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .pagination-links a.active {
+                background: #667eea;
+                color: #fff;
             }
         `;
         document.head.appendChild(styleSheet);

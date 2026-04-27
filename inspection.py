@@ -1,11 +1,7 @@
 import paramiko
 import tempfile
 import os
-<<<<<<< HEAD
 from datetime import datetime, timedelta
-=======
-from datetime import datetime
->>>>>>> 95a635aae3b846cf53c8ff02c75fdce8d013af38
 from config import MAX_ALERT_THRESHOLD
 
 class ServerInspector:
