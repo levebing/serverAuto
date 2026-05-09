@@ -70,15 +70,38 @@ def init_db():
             group_id INTEGER,
             group_name TEXT,
             report_name TEXT,
+            file_path TEXT,
             generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             is_deleted INTEGER DEFAULT 0,
             FOREIGN KEY (group_id) REFERENCES groups(id)
         )
     ''')
     
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS inspection_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            command TEXT NOT NULL,
+            description TEXT,
+            sort_order INTEGER DEFAULT 0,
+            is_enabled INTEGER DEFAULT 1,
+            is_deleted INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
     cursor.execute('SELECT COUNT(*) FROM groups')
     if cursor.fetchone()[0] == 0:
         cursor.execute('INSERT INTO groups (name) VALUES (?)', ('默认分组',))
+    
+    cursor.execute('SELECT COUNT(*) FROM inspection_items')
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('INSERT INTO inspection_items (name, command, description, sort_order) VALUES (?, ?, ?, ?)', ('CPU使用率', "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'", '获取CPU使用率', 1))
+        cursor.execute('INSERT INTO inspection_items (name, command, description, sort_order) VALUES (?, ?, ?, ?)', ('内存使用情况', 'free -h', '获取内存使用情况', 2))
+        cursor.execute('INSERT INTO inspection_items (name, command, description, sort_order) VALUES (?, ?, ?, ?)', ('磁盘使用情况', 'df -h', '获取磁盘使用情况', 3))
+        cursor.execute('INSERT INTO inspection_items (name, command, description, sort_order) VALUES (?, ?, ?, ?)', ('系统时间', 'date "+%Y-%m-%d %H:%M:%S"', '获取系统时间', 4))
+        cursor.execute('INSERT INTO inspection_items (name, command, description, sort_order) VALUES (?, ?, ?, ?)', ('操作系统版本', 'cat /etc/os-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || uname -a', '获取操作系统版本', 5))
     
     conn.commit()
     conn.close()
@@ -360,14 +383,14 @@ def delete_scheduled_task(server_id):
     conn.close()
 
 # 报告相关函数
-def add_report(report_type, group_id, group_name, report_name):
+def add_report(report_type, group_id, group_name, report_name, file_path=None):
     conn = get_connection()
     cursor = conn.cursor()
     generated_at = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     cursor.execute('''
-        INSERT INTO reports (report_type, group_id, group_name, report_name, generated_at)
-        VALUES (?, ?, ?, ?, ?)
-    ''', (report_type, group_id, group_name, report_name, generated_at))
+        INSERT INTO reports (report_type, group_id, group_name, report_name, file_path, generated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (report_type, group_id, group_name, report_name, file_path, generated_at))
     conn.commit()
     report_id = cursor.lastrowid
     conn.close()
@@ -443,6 +466,75 @@ def update_group_sort_order(group_id, sort_order):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute('UPDATE groups SET sort_order = ? WHERE id = ?', (sort_order, group_id))
+    conn.commit()
+    rows_affected = cursor.rowcount
+    conn.close()
+    return rows_affected > 0
+
+# 巡检项相关操作
+
+def add_inspection_item(name, command, description=''):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO inspection_items (name, command, description)
+        VALUES (?, ?, ?)
+    ''', (name, command, description))
+    conn.commit()
+    item_id = cursor.lastrowid
+    conn.close()
+    return item_id
+
+def get_all_inspection_items():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name, command, description, sort_order, is_enabled FROM inspection_items WHERE is_deleted = 0 ORDER BY sort_order ASC')
+    items = cursor.fetchall()
+    conn.close()
+    return items
+
+def get_inspection_item_by_id(item_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name, command, description, sort_order, is_enabled FROM inspection_items WHERE id = ? AND is_deleted = 0', (item_id,))
+    item = cursor.fetchone()
+    conn.close()
+    return item
+
+def update_inspection_item(item_id, name, command, description=''):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        UPDATE inspection_items SET name = ?, command = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND is_deleted = 0
+    ''', (name, command, description, item_id))
+    conn.commit()
+    rows_affected = cursor.rowcount
+    conn.close()
+    return rows_affected > 0
+
+def delete_inspection_item(item_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE inspection_items SET is_deleted = 1 WHERE id = ? AND is_deleted = 0', (item_id,))
+    conn.commit()
+    rows_affected = cursor.rowcount
+    conn.close()
+    return rows_affected > 0
+
+def toggle_inspection_item(item_id, is_enabled):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE inspection_items SET is_enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND is_deleted = 0', (is_enabled, item_id))
+    conn.commit()
+    rows_affected = cursor.rowcount
+    conn.close()
+    return rows_affected > 0
+
+def update_inspection_item_sort_order(item_id, sort_order):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('UPDATE inspection_items SET sort_order = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', (sort_order, item_id))
     conn.commit()
     rows_affected = cursor.rowcount
     conn.close()

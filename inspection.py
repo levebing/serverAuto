@@ -3,6 +3,7 @@ import tempfile
 import os
 from datetime import datetime, timedelta
 from config import MAX_ALERT_THRESHOLD
+from database import get_all_inspection_items
 
 class ServerInspector:
     def __init__(self, ip, port, username, private_key_content=None, password=None):
@@ -197,85 +198,116 @@ class ServerInspector:
             return None, self.last_error if self.last_error else "连接服务器失败"
         
         try:
-            disk_info = self.get_disk_usage()
-            memory_info = self.get_memory_usage()
-            cpu_usage = self.get_cpu_usage()
-            system_time = self.get_system_time()
-            os_version = self.get_os_version()
+            # 从数据库获取巡检项
+            inspection_items = get_all_inspection_items()
+            
             inspection_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             
+            # 执行所有巡检项
+            results = {}
             alerts = []
             
-            if disk_info:
-                for disk in disk_info:
-                    if disk['usage_percent'] >= MAX_ALERT_THRESHOLD:
-                        alerts.append(f"磁盘 {disk['mount_point']} 使用率 {disk['usage_percent']}%")
-            
-            if memory_info and memory_info.get('usage_percent') >= MAX_ALERT_THRESHOLD:
-                alerts.append(f"内存使用率 {memory_info['usage_percent']}%")
+            for item in inspection_items:
+                item_id, name, command, description, sort_order, is_enabled = item
+                if is_enabled:
+                    output = self.execute_command(command)
+                    results[name] = output
+                    
+                    # 特殊处理CPU和内存使用率的告警
+                    if name == 'CPU使用率' and output:
+                        try:
+                            cpu_percent = float(output.strip())
+                            if cpu_percent >= MAX_ALERT_THRESHOLD:
+                                alerts.append(f"CPU使用率 {cpu_percent}%")
+                        except:
+                            pass
+                    elif name == '内存使用情况' and output:
+                        # 从free -h输出中提取使用率
+                        lines = output.strip().split('\n')
+                        for line in lines:
+                            if line.startswith('Mem:'):
+                                parts = line.split()
+                                if len(parts) >= 8:
+                                    try:
+                                        total = float(parts[1].replace('G', '').replace('M', ''))
+                                        used = float(parts[2].replace('G', '').replace('M', ''))
+                                        percent = (used / total) * 100
+                                        if percent >= MAX_ALERT_THRESHOLD:
+                                            alerts.append(f"内存使用率 {percent:.1f}%")
+                                    except:
+                                        pass
+                    elif name == '磁盘使用情况' and output:
+                        lines = output.strip().split('\n')[1:]
+                        for line in lines:
+                            parts = line.split()
+                            if len(parts) >= 6:
+                                filesystem = parts[0]
+                                if not self.is_useless_filesystem(filesystem):
+                                    usage_percent = parts[4]
+                                    try:
+                                        percent = int(usage_percent.rstrip('%'))
+                                        mount_point = parts[-1]
+                                        if percent >= MAX_ALERT_THRESHOLD:
+                                            alerts.append(f"磁盘 {mount_point} 使用率 {percent}%")
+                                    except:
+                                        pass
             
             alert_content = '; '.join(alerts) if alerts else '无告警'
             
+            # 生成报告描述
             description = f"========== 服务器巡检报告 ==========\n"
             description += f"服务器IP: {self.ip}\n"
             description += f"巡检时间: {inspection_time}\n"
             description += f"=====================================\n\n"
             
-            description += "【操作系统信息】\n"
-            if os_version:
-                description += f"{os_version}\n"
-            else:
-                description += "无法获取操作系统版本\n"
-            description += "\n"
-            
-            description += "【系统时间】\n"
-            description += f"{system_time}\n\n"
-            
-            description += "【CPU使用率】\n"
-            description += f"{cpu_usage}%\n\n"
-            
-            description += "【内存使用情况】\n"
-            if memory_info:
-                memory_status = "⚠️" if memory_info.get('usage_percent') >= MAX_ALERT_THRESHOLD else ""
-                description += f"总计: {memory_info['total']}\n"
-                description += f"已用: {memory_info['used']}\n"
-                description += f"可用: {memory_info['available']}\n"
-                description += f"使用率: {memory_info.get('usage_percent', '未知')}% {memory_status}\n"
-            else:
-                description += "无法获取内存信息\n"
-            description += "\n"
-            
-            description += "【磁盘使用情况】\n"
-            if disk_info:
-                for disk in disk_info:
-                    status = "⚠️" if disk['usage_percent'] >= MAX_ALERT_THRESHOLD else ""
-                    description += f"  {disk['mount_point']}\n"
-                    description += f"    文件系统: {disk['filesystem']}\n"
-                    description += f"    总计: {disk['size']}\n"
-                    description += f"    已用: {disk['used']}\n"
-                    description += f"    可用: {disk['available']}\n"
-                    description += f"    使用率: {disk['usage_percent']}% {status}\n"
-            else:
-                description += "无法获取磁盘信息\n"
+            for item in inspection_items:
+                item_id, name, command, item_desc, sort_order, is_enabled = item
+                if is_enabled:
+                    description += f"【{name}】\n"
+                    if item_desc:
+                        description += f"描述: {item_desc}\n"
+                    description += f"命令: {command}\n"
+                    output = results.get(name, '')
+                    if output:
+                        # 格式化输出，使其更易读
+                        description += f"结果:\n"
+                        for line in output.split('\n'):
+                            description += f"  {line}\n"
+                    else:
+                        description += f"结果: 无法获取数据\n"
+                    description += "\n"
             
             if alerts:
-                description += f"\n【告警内容】\n"
+                description += f"【告警内容】\n"
                 description += "⚠️ " + alert_content
             else:
-                description += f"\n【告警内容】\n"
+                description += f"【告警内容】\n"
                 description += "✅ 无告警"
             
             description += f"\n\n=====================================\n"
             
+            # 提取关键指标用于存储
+            # 使用结构化方法获取数据，而不是原始命令输出
+            disk_info = self.get_disk_usage()
+            memory_info = self.get_memory_usage()
+            cpu_value = self.get_cpu_usage()
+            
+            disk_usage = str(disk_info) if disk_info else ''
+            memory_usage = str(memory_info) if memory_info else ''
+            cpu_usage = str(cpu_value) if cpu_value else ''
+            system_time = results.get('系统时间', '')
+            os_version = results.get('操作系统版本', '')
+            
             return {
-                'disk_usage': str(disk_info),
-                'memory_usage': str(memory_info),
-                'cpu_usage': str(cpu_usage),
+                'disk_usage': disk_usage,
+                'memory_usage': memory_usage,
+                'cpu_usage': cpu_usage,
                 'system_time': system_time,
                 'os_version': os_version,
                 'inspection_time': inspection_time,
                 'alert_content': alert_content,
-                'description': description
+                'description': description,
+                'custom_results': results
             }, None
         finally:
             self.disconnect()

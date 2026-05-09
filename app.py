@@ -1,12 +1,15 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response
 from flask_cors import CORS
-from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count
+from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item
 from inspection import ServerInspector
 import io
 from docx import Document
 from docx.shared import Pt, RGBColor
 import datetime
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+import base64
+import requests
+import config
 
 app = Flask(__name__)
 CORS(app)
@@ -253,6 +256,17 @@ def generate_inspection_result(result):
         except:
             pass
     
+    # 添加自定义巡检项的结果
+    custom_results = result.get('custom_results', {})
+    predefined_items = ['CPU使用率', '内存使用情况', '磁盘使用情况', '系统时间', '操作系统版本']
+    for name, output in custom_results.items():
+        if name not in predefined_items and output:
+            # 对于自定义巡检项，检查是否有运行结果
+            if output.strip():
+                items.append(f"{name}: 运行中")
+            else:
+                items.append(f"{name}: 未运行")
+    
     alert = result.get('alert_content')
     if alert and alert != '无告警':
         status = '⚠️ 告警'
@@ -452,6 +466,62 @@ def api_delete_report(report_id):
     result = delete_report(report_id)
     return jsonify({'success': result})
 
+# 巡检项管理路由
+@app.route('/inspection_items')
+def inspection_items():
+    items = get_all_inspection_items()
+    return render_template('inspection_items.html', inspection_items=items)
+
+@app.route('/api/add_inspection_item', methods=['POST'])
+def api_add_inspection_item():
+    name = request.json.get('name')
+    command = request.json.get('command')
+    description = request.json.get('description', '')
+    
+    if not name or not command:
+        return jsonify({'success': False, 'message': '名称和命令不能为空'})
+    
+    item_id = add_inspection_item(name, command, description)
+    if item_id:
+        return jsonify({'success': True, 'item_id': item_id})
+    else:
+        return jsonify({'success': False, 'message': '添加失败'})
+
+@app.route('/api/update_inspection_item', methods=['POST'])
+def api_update_inspection_item():
+    item_id = request.json.get('id')
+    name = request.json.get('name')
+    command = request.json.get('command')
+    description = request.json.get('description', '')
+    
+    if not item_id or not name or not command:
+        return jsonify({'success': False, 'message': '参数不能为空'})
+    
+    result = update_inspection_item(item_id, name, command, description)
+    if result:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '更新失败'})
+
+@app.route('/api/delete_inspection_item/<int:item_id>')
+def api_delete_inspection_item(item_id):
+    result = delete_inspection_item(item_id)
+    return jsonify({'success': result})
+
+@app.route('/api/toggle_inspection_item', methods=['POST'])
+def api_toggle_inspection_item():
+    item_id = request.json.get('id')
+    is_enabled = request.json.get('is_enabled')
+    
+    if item_id is None or is_enabled is None:
+        return jsonify({'success': False, 'message': '参数不能为空'})
+    
+    result = toggle_inspection_item(item_id, is_enabled)
+    if result:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False, 'message': '操作失败'})
+
 @app.route('/reports')
 def reports():
     groups = get_all_groups()
@@ -470,7 +540,8 @@ def reports():
     
     return render_template('reports.html', groups=groups, reports=reports, 
                            filter_type=filter_type, filter_group=filter_group, filter_date=filter_date, 
-                           page=page, per_page=per_page, total=total, total_pages=total_pages)
+                           page=page, per_page=per_page, total=total, total_pages=total_pages, 
+                           base_url=config.REPORT_STORAGE['base_url'])
 
 @app.route('/api/generate_report', methods=['POST'])
 def api_generate_report():
@@ -504,9 +575,6 @@ def api_generate_report():
     # 生成报告名称
     report_name = report_content['title']
     
-    # 添加报告记录到数据库
-    add_report(report_type, group_id if group_id != 'all' else None, group_name, report_name)
-    
     # 生成Word文档
     doc = generate_report_docx(report_content, report_type)
     
@@ -515,8 +583,57 @@ def api_generate_report():
     doc.save(output)
     output.seek(0)
     
-    # 将文件内容保存到数据库或文件系统
-    # 这里我们返回文件下载响应
+    # 上传文件到文件服务器
+    file_path = None
+    try:
+        # 重置文件指针
+        output.seek(0)
+        
+        # 调用文件上传服务（使用formData格式）
+        upload_url = config.FILE_UPLOAD_SERVICE['url']
+        print(f"开始上传文件到: {upload_url}")
+        print(f"文件名: {filename}")
+        
+        # 构建formData
+        files = {'files': (filename, output, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')}
+        
+        # 发送请求
+        response = requests.post(upload_url, files=files, timeout=config.FILE_UPLOAD_SERVICE['timeout'])
+        
+        print(f"上传响应状态码: {response.status_code}")
+        print(f"上传响应内容: {response.text}")
+        
+        # 解析上传响应
+        if response.status_code == 200:
+            try:
+                upload_result = response.json()
+                print(f"上传结果: {upload_result}")
+                # 从响应中获取文件路径
+                if upload_result.get('code') == 200 and upload_result.get('data'):
+                    # 假设data是一个数组，取第一个元素
+                    if isinstance(upload_result['data'], list) and upload_result['data']:
+                        file_path = upload_result['data'][0]
+                        print(f"获取到的文件路径: {file_path}")
+                    elif isinstance(upload_result['data'], str):
+                        file_path = upload_result['data']
+                        print(f"获取到的文件路径: {file_path}")
+            except Exception as json_error:
+                print(f"解析响应JSON失败: {json_error}")
+        else:
+            print(f"上传失败，状态码: {response.status_code}")
+    except Exception as e:
+        print(f"文件上传失败: {e}")
+        import traceback
+        traceback.print_exc()
+    
+    # 无论上传是否成功，都继续生成报告
+    print(f"文件路径: {file_path}")
+    
+    # 添加报告记录到数据库
+    add_report(report_type, group_id if group_id != 'all' else None, group_name, report_name, file_path)
+    
+    # 重置文件指针
+    output.seek(0)
     
     # 返回文件下载响应
     return send_file(
@@ -747,4 +864,4 @@ def get_connection():
     return sqlite3.connect(DATABASE_PATH)
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=config.PORT)
