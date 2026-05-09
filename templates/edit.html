@@ -17,7 +17,7 @@
             display: flex;
         }
         .sidebar {
-            width: 280px;
+            width: 220px;
             background: rgba(26, 26, 46, 0.95);
             border-right: 1px solid rgba(255, 255, 255, 0.1);
             padding: 20px 0;
@@ -75,7 +75,7 @@
         }
         .main-content {
             flex: 1;
-            margin-left: 280px;
+            margin-left: 220px;
             padding: 24px;
         }
         .header {
@@ -308,89 +308,7 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo">
-            <h1>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                    <line x1="7" y1="2" x2="7" y2="22"></line>
-                    <line x1="17" y1="2" x2="17" y2="22"></line>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                </svg>
-                服务器巡检系统
-            </h1>
-        </div>
-        
-        <div class="group-section">
-            <h4>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="9" cy="7" r="4"></circle>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                分组管理
-            </h4>
-            <ul class="group-list">
-                <li>
-                    <a href="/?group_id=all">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M19 11H5"></path>
-                            <path d="M12 19V7"></path>
-                        </svg>
-                        全部
-                    </a>
-                </li>
-                {% for group in groups %}
-                <li>
-                    <a href="/?group_id={{ group[0] }}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                            <circle cx="9" cy="7" r="4"></circle>
-                        </svg>
-                        {{ group[1] }}
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-            <button class="add-group-btn" onclick="showAddGroupModal()">+ 添加分组</button>
-        </div>
-        
-        <ul class="menu">
-            <li>
-                <a href="/">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 21V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path>
-                        <path d="M14 2v4"></path>
-                        <path d="M10 2v4"></path>
-                        <path d="M6 2v4"></path>
-                    </svg>
-                    服务器列表
-                </a>
-            </li>
-            <li>
-                <a href="/records">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    巡检记录
-                </a>
-            </li>
-            <li>
-                <a href="#">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    系统设置
-                </a>
-            </li>
-        </ul>
-    </div>
+    {% include 'sidebar.html' %}
     
     <div class="main-content">
         <div class="header">

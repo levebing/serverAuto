@@ -21,3 +21,6 @@ FILE_UPLOAD_SERVICE = {
 REPORT_STORAGE = {
     'base_url': os.getenv("REPORT_BASE_URL")
 }
+
+# 密码加密密钥（重要：生产环境请使用环境变量配置）
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "u5DriJCI9KBRrCD__P_345u0NxC82W1wIfQ9w9Y19QQ=")

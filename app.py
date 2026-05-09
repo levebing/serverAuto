@@ -171,7 +171,7 @@ def edit(server_id):
         group_id = int(request.form.get('group_id', 1))
         remark = request.form.get('remark', '')
         private_key_content = server[5]
-        password = server[6]
+        password = server[6]  # 密码字段索引为6（解密后的）
         
         if 'private_key' in request.files:
             key_file = request.files['private_key']

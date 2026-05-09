@@ -1,6 +1,7 @@
 import sqlite3
 from datetime import datetime, timedelta
 from config import DATABASE_PATH
+from encryption import encrypt_password, decrypt_password
 
 def init_db():
     conn = sqlite3.connect(DATABASE_PATH)
@@ -162,10 +163,12 @@ def update_group(group_id, name):
 def add_server(name, ip, port, username, group_id=1, remark='', private_key_content=None, password=None):
     conn = get_connection()
     cursor = conn.cursor()
+    # 加密密码
+    encrypted_password = encrypt_password(password)
     cursor.execute('''
         INSERT INTO servers (name, ip, port, username, group_id, remark, private_key_content, password)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (name, ip, port, username, group_id, remark, private_key_content, password))
+    ''', (name, ip, port, username, group_id, remark, private_key_content, encrypted_password))
     conn.commit()
     server_id = cursor.lastrowid
     conn.close()
@@ -208,15 +211,25 @@ def get_server_by_id(server_id):
     cursor.execute('SELECT * FROM servers WHERE id = ? AND is_deleted = 0', (server_id,))
     server = cursor.fetchone()
     conn.close()
+    
+    if server:
+        # 解密密码（server[5] 是 private_key_content, server[6] 是 password）
+        server_list = list(server)
+        if server_list[6]:  # password 字段
+            server_list[6] = decrypt_password(server_list[6])
+        server = tuple(server_list)
+    
     return server
 
 def update_server(server_id, name, ip, port, username, group_id=1, remark='', private_key_content=None, password=None):
     conn = get_connection()
     cursor = conn.cursor()
+    # 加密密码
+    encrypted_password = encrypt_password(password)
     cursor.execute('''
         UPDATE servers SET name=?, ip=?, port=?, username=?, group_id=?, remark=?, private_key_content=?, password=?
         WHERE id=?
-    ''', (name, ip, port, username, group_id, remark, private_key_content, password, server_id))
+    ''', (name, ip, port, username, group_id, remark, private_key_content, encrypted_password, server_id))
     conn.commit()
     conn.close()
 
