@@ -1,8 +1,13 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response, session
 from flask_cors import CORS
-from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item
+from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item, get_inspection_items_count, get_user_by_username, update_user_password, add_upload_record, get_upload_record_by_id, get_all_upload_records, get_upload_records_count, delete_upload_record, get_upload_records_by_file_path, add_fault, get_all_faults, get_faults_count, get_fault_by_id, update_fault, delete_fault, review_fault
+from encryption import decrypt_password
 from inspection import ServerInspector
+from windows_inspection import WindowsServerInspector
 import io
+import os
+import uuid
+import hashlib
 from docx import Document
 from docx.shared import Pt, RGBColor
 import datetime
@@ -13,6 +18,17 @@ import config
 
 app = Flask(__name__)
 CORS(app)
+app.secret_key = config.SECRET_KEY
+
+def login_required(f):
+    """登录装饰器"""
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    decorated_function.__name__ = f.__name__
+    decorated_function.__doc__ = f.__doc__
+    return decorated_function
 
 def generate_docx_report(server_name, ip, result):
     doc = Document()
@@ -100,7 +116,68 @@ def generate_docx_report(server_name, ip, result):
     
     return doc
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
+        
+        user = get_user_by_username(username)
+        if user:
+            # 用户存在，验证密码（解密后比较）
+            stored_password = user[2]  # 数据库中加密的密码
+            decrypted_password = decrypt_password(stored_password)
+            if password == decrypted_password:
+                session['username'] = username
+                return jsonify({'success': True})
+        
+        return jsonify({'success': False, 'message': '用户名或密码错误'})
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('login'))
+
+@app.route('/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        old_password = request.form.get('old_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if not old_password or not new_password or not confirm_password:
+            return render_template('change_password.html', message='密码不能为空', success=False)
+        
+        if new_password != confirm_password:
+            return render_template('change_password.html', message='两次输入的密码不一致', success=False)
+        
+        username = session.get('username')
+        user = get_user_by_username(username)
+        
+        if not user:
+            return render_template('change_password.html', message='用户不存在', success=False)
+        
+        # 验证原密码
+        stored_password = user[2]
+        decrypted_password = decrypt_password(stored_password)
+        
+        if old_password != decrypted_password:
+            return render_template('change_password.html', message='原密码错误', success=False)
+        
+        # 更新密码
+        user_id = user[0]
+        update_user_password(user_id, new_password)
+        
+        return redirect(url_for('index'))
+    
+    return render_template('change_password.html')
+
 @app.route('/')
+@login_required
 def index():
     group_id = request.args.get('group_id', 'all')
     ip = request.args.get('ip', '')
@@ -119,6 +196,7 @@ def index():
     return render_template('index.html', servers=servers, groups=groups, selected_group=group_id, search_ip=ip, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/records')
+@login_required
 def records():
     group_id = request.args.get('group_id', 'all')
     ip = request.args.get('ip', '')
@@ -131,6 +209,7 @@ def records():
     return render_template('records.html', records=records, groups=groups, selected_group=group_id, search_ip=ip, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/add', methods=['GET', 'POST'])
+@login_required
 def add():
     groups = get_all_groups()
     if request.method == 'POST':
@@ -151,12 +230,15 @@ def add():
         if not private_key_content:
             password = request.form.get('password')
         
-        add_server(name, ip, port, username, group_id, remark, private_key_content, password)
+        os_type = request.form.get('os_type', 'linux')
+        
+        add_server(name, ip, port, username, group_id, remark, private_key_content, password, os_type)
         return redirect(url_for('index'))
     
     return render_template('add.html', groups=groups)
 
 @app.route('/edit/<int:server_id>', methods=['GET', 'POST'])
+@login_required
 def edit(server_id):
     server = get_server_by_id(server_id)
     groups = get_all_groups()
@@ -181,29 +263,44 @@ def edit(server_id):
         if not private_key_content:
             password = request.form.get('password')
         
-        update_server(server_id, name, ip, port, username, group_id, remark, private_key_content, password)
+        os_type = request.form.get('os_type', 'linux')
+        
+        update_server(server_id, name, ip, port, username, group_id, remark, private_key_content, password, os_type)
         return redirect(url_for('index'))
     
     return render_template('edit.html', server=server, groups=groups)
 
 @app.route('/delete/<int:server_id>')
+@login_required
 def delete(server_id):
     delete_server(server_id)
     return redirect(url_for('index'))
 
 @app.route('/inspect/<int:server_id>')
+@login_required
 def inspect(server_id):
     server = get_server_by_id(server_id)
     if not server:
         return "服务器不存在", 404
     
-    inspector = ServerInspector(
-        ip=server[2],
-        port=server[3],
-        username=server[4],
-        private_key_content=server[5],
-        password=server[6]
-    )
+    # 根据操作系统类型选择巡检方式
+    os_type = server[8] if len(server) > 8 else 'linux'
+    
+    if os_type == 'windows':
+        inspector = WindowsServerInspector(
+            ip=server[2],
+            port=server[3],
+            username=server[4],
+            password=server[6]
+        )
+    else:
+        inspector = ServerInspector(
+            ip=server[2],
+            port=server[3],
+            username=server[4],
+            private_key_content=server[5],
+            password=server[6]
+        )
     
     result, error = inspector.inspect()
     
@@ -261,11 +358,17 @@ def generate_inspection_result(result):
     predefined_items = ['CPU使用率', '内存使用情况', '磁盘使用情况', '系统时间', '操作系统版本']
     for name, output in custom_results.items():
         if name not in predefined_items and output:
-            # 对于自定义巡检项，检查是否有运行结果
-            if output.strip():
-                items.append(f"{name}: 运行中")
+            # 对于自定义巡检项，显示实际的输出内容
+            output_str = str(output).strip()
+            if output_str:
+                # 截取前50个字符作为摘要，避免过长
+                if len(output_str) > 50:
+                    output_str = output_str[:50] + '...'
+                # 替换换行符为空格
+                output_str = output_str.replace('\n', ' ').replace('\r', '')
+                items.append(f"{name}: {output_str}")
             else:
-                items.append(f"{name}: 未运行")
+                items.append(f"{name}: 无输出")
     
     alert = result.get('alert_content')
     if alert and alert != '无告警':
@@ -276,18 +379,30 @@ def generate_inspection_result(result):
     return f"{status} | {', '.join(items)}"
 
 @app.route('/api/inspect_async/<int:server_id>', methods=['POST'])
+@login_required
 def inspect_async(server_id):
     server = get_server_by_id(server_id)
     if not server:
         return jsonify({'success': False, 'message': '服务器不存在'})
     
-    inspector = ServerInspector(
-        ip=server[2],
-        port=server[3],
-        username=server[4],
-        private_key_content=server[5],
-        password=server[6]
-    )
+    # 根据操作系统类型选择巡检方式
+    os_type = server[8] if len(server) > 8 else 'linux'
+    
+    if os_type == 'windows':
+        inspector = WindowsServerInspector(
+            ip=server[2],
+            port=server[3],
+            username=server[4],
+            password=server[6]
+        )
+    else:
+        inspector = ServerInspector(
+            ip=server[2],
+            port=server[3],
+            username=server[4],
+            private_key_content=server[5],
+            password=server[6]
+        )
     
     result, error = inspector.inspect()
     
@@ -317,7 +432,24 @@ def inspect_async(server_id):
         'inspection_time': result['inspection_time']
     })
 
+@app.route('/download')
+@login_required
+def download_file():
+    path = request.args.get('path')
+    if not path:
+        return "参数错误", 400
+    
+    safe_path = os.path.normpath(path)
+    if safe_path.startswith('..') or safe_path.startswith('/'):
+        return "路径非法", 403
+    
+    file_path = os.path.join(config.UPLOAD_LOCAL_PATH, safe_path)
+    if os.path.exists(file_path):
+        return send_from_directory(os.path.dirname(file_path), os.path.basename(file_path))
+    return "文件不存在", 404
+
 @app.route('/download_report/<int:record_id>')
+@login_required
 def download_report(record_id):
     record = get_inspection_record_by_id(record_id)
     if not record:
@@ -356,6 +488,7 @@ def download_report(record_id):
     )
 
 @app.route('/delete_record/<int:record_id>')
+@login_required
 def delete_record(record_id):
     conn = get_connection()
     cursor = conn.cursor()
@@ -364,18 +497,62 @@ def delete_record(record_id):
     conn.close()
     return redirect(url_for('records'))
 
+@app.route('/api/get_record_detail/<int:record_id>')
+@login_required
+def get_record_detail(record_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT ir.*, s.name as server_name, s.ip as server_ip, g.name as group_name
+        FROM inspection_records ir
+        LEFT JOIN servers s ON ir.server_id = s.id
+        LEFT JOIN groups g ON s.group_id = g.id
+        WHERE ir.id = ? AND ir.is_deleted = 0
+    ''', (record_id,))
+    record = cursor.fetchone()
+    conn.close()
+    
+    if not record:
+        return jsonify({'success': False, 'message': '记录不存在'})
+    
+    return jsonify({
+        'success': True,
+        'record': {
+            'server_name': record[12],
+            'server_ip': record[13],
+            'group_name': record[14],
+            'cpu_usage': record[4],
+            'memory_usage': record[3],
+            'disk_usage': record[2],
+            'system_time': record[5],
+            'os_version': record[6],
+            'alert_content': record[8],
+            'inspection_result': record[10],
+            'inspection_time': record[7]
+        }
+    })
+
 @app.route('/api/add_group', methods=['POST'])
+@login_required
 def api_add_group():
     name = request.json.get('name')
-    if name:
-        group_id = add_group(name)
-        if group_id:
-            return jsonify({'success': True, 'group_id': group_id, 'name': name})
-        else:
-            return jsonify({'success': False, 'message': '分组名称已存在'})
-    return jsonify({'success': False, 'message': '分组名称不能为空'})
+    sort_order = request.json.get('sort_order', 0)
+    parent_id = request.json.get('parent_id')
+    
+    if not name:
+        return jsonify({'success': False, 'message': '分组名称不能为空'})
+    
+    if parent_id == '' or parent_id == '0' or parent_id is None:
+        parent_id = None
+    
+    group_id = add_group(name, sort_order, parent_id)
+    if group_id:
+        return jsonify({'success': True, 'group_id': group_id, 'name': name})
+    else:
+        return jsonify({'success': False, 'message': '分组名称已存在'})
 
 @app.route('/api/delete_group/<int:group_id>')
+@login_required
 def api_delete_group(group_id):
     if group_id == 1:
         return jsonify({'success': False, 'message': '不能删除默认分组'})
@@ -383,14 +560,22 @@ def api_delete_group(group_id):
     return jsonify({'success': True})
 
 @app.route('/api/update_group', methods=['POST'])
+@login_required
 def api_update_group():
     group_id = request.json.get('group_id')
     name = request.json.get('name')
-    if not group_id or not name:
-        return jsonify({'success': False, 'message': '参数不能为空'})
+    sort_order = request.json.get('sort_order')
+    parent_id = request.json.get('parent_id')
+    
+    if not group_id:
+        return jsonify({'success': False, 'message': '分组ID不能为空'})
     if int(group_id) == 1:
-        return jsonify({'success': False, 'message': '不能修改默认分组名称'})
-    result = update_group(group_id, name)
+        return jsonify({'success': False, 'message': '不能修改默认分组'})
+    
+    if parent_id == '' or parent_id == '0' or parent_id is None:
+        parent_id = None
+    
+    result = update_group(group_id, name, sort_order, parent_id)
     if result is None:
         return jsonify({'success': False, 'message': '分组名称已存在'})
     elif result:
@@ -399,6 +584,7 @@ def api_update_group():
         return jsonify({'success': False, 'message': '分组不存在'})
 
 @app.route('/api/update_group_sort', methods=['POST'])
+@login_required
 def api_update_group_sort():
     group_id = request.json.get('group_id')
     sort_order = request.json.get('sort_order')
@@ -410,12 +596,25 @@ def api_update_group_sort():
     else:
         return jsonify({'success': False, 'message': '分组不存在'})
 
+@app.route('/api/search_groups', methods=['GET'])
+@login_required
+def api_search_groups():
+    keyword = request.args.get('keyword', '').strip()
+    groups_list = get_all_groups()
+    
+    if keyword:
+        groups_list = [g for g in groups_list if keyword.lower() in g[1].lower()]
+    
+    return jsonify({'success': True, 'data': groups_list})
+
 @app.route('/groups')
+@login_required
 def groups():
     groups = get_all_groups()
     return render_template('groups.html', groups=groups)
 
 @app.route('/tasks')
+@login_required
 def tasks():
     page = request.args.get('page', 1, type=int)
     per_page = 10
@@ -427,6 +626,7 @@ def tasks():
     return render_template('tasks.html', tasks=tasks, servers=servers, groups=groups, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/api/add_task', methods=['POST'])
+@login_required
 def api_add_task():
     server_id = request.json.get('server_id')
     cron_expression = request.json.get('cron_expression')
@@ -442,6 +642,7 @@ def api_add_task():
         return jsonify({'success': False, 'message': '添加任务失败'})
 
 @app.route('/api/update_task', methods=['POST'])
+@login_required
 def api_update_task():
     task_id = request.json.get('task_id')
     cron_expression = request.json.get('cron_expression')
@@ -457,22 +658,75 @@ def api_update_task():
         return jsonify({'success': False, 'message': '更新任务失败'})
 
 @app.route('/api/delete_task/<int:server_id>')
+@login_required
 def api_delete_task(server_id):
     delete_scheduled_task(server_id)
     return jsonify({'success': True})
 
 @app.route('/api/delete_report/<int:report_id>')
+@login_required
 def api_delete_report(report_id):
     result = delete_report(report_id)
     return jsonify({'success': result})
 
 # 巡检项管理路由
 @app.route('/inspection_items')
+@login_required
 def inspection_items():
-    items = get_all_inspection_items()
-    return render_template('inspection_items.html', inspection_items=items)
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    os_type = request.args.get('os_type')
+    
+    items = get_all_inspection_items(os_type=os_type, page=page, per_page=per_page)
+    total = get_inspection_items_count(os_type=os_type)
+    total_pages = (total + per_page - 1) // per_page
+    
+    return render_template('inspection_items.html', 
+                         inspection_items=items, 
+                         page=page, 
+                         per_page=per_page, 
+                         total=total, 
+                         total_pages=total_pages,
+                         os_type=os_type)
+
+@app.route('/inspection_item', methods=['GET', 'POST'])
+@login_required
+def inspection_item():
+    item_id = request.args.get('id')
+    item = None
+    
+    if item_id:
+        item = get_inspection_item_by_id(int(item_id))
+    
+    if request.method == 'POST':
+        item_id = request.form.get('item_id')
+        name = request.form.get('item_name')
+        command = request.form.get('item_command')
+        description = request.form.get('item_description', '')
+        os_type = request.form.get('item_os_type', 'linux')
+        
+        if not name or not command:
+            return render_template('add_inspection_item.html', item=item, message='名称和命令不能为空', success=False)
+        
+        if item_id:
+            # 更新巡检项
+            result = update_inspection_item(int(item_id), name, command, description, os_type)
+            if result:
+                return redirect(url_for('inspection_items'))
+            else:
+                return render_template('add_inspection_item.html', item=item, message='更新失败', success=False)
+        else:
+            # 添加巡检项
+            result = add_inspection_item(name, command, description, os_type)
+            if result:
+                return redirect(url_for('inspection_items'))
+            else:
+                return render_template('add_inspection_item.html', item=None, message='添加失败', success=False)
+    
+    return render_template('add_inspection_item.html', item=item)
 
 @app.route('/api/add_inspection_item', methods=['POST'])
+@login_required
 def api_add_inspection_item():
     name = request.json.get('name')
     command = request.json.get('command')
@@ -488,6 +742,7 @@ def api_add_inspection_item():
         return jsonify({'success': False, 'message': '添加失败'})
 
 @app.route('/api/update_inspection_item', methods=['POST'])
+@login_required
 def api_update_inspection_item():
     item_id = request.json.get('id')
     name = request.json.get('name')
@@ -504,11 +759,13 @@ def api_update_inspection_item():
         return jsonify({'success': False, 'message': '更新失败'})
 
 @app.route('/api/delete_inspection_item/<int:item_id>')
+@login_required
 def api_delete_inspection_item(item_id):
     result = delete_inspection_item(item_id)
     return jsonify({'success': result})
 
 @app.route('/api/toggle_inspection_item', methods=['POST'])
+@login_required
 def api_toggle_inspection_item():
     item_id = request.json.get('id')
     is_enabled = request.json.get('is_enabled')
@@ -522,7 +779,109 @@ def api_toggle_inspection_item():
     else:
         return jsonify({'success': False, 'message': '操作失败'})
 
+@app.route('/upload/<path:filename>')
+def serve_upload(filename):
+    file_path = os.path.join(config.UPLOAD_LOCAL_PATH, filename)
+    if os.path.exists(file_path):
+        return send_file(file_path)
+    return jsonify({'success': False, 'message': '文件不存在'}), 404
+
+@app.route('/api/upload', methods=['POST'])
+def api_upload():
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'message': '没有文件'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': '文件名为空'}), 400
+    
+    try:
+        original_name = file.filename
+        ext = os.path.splitext(original_name)[1]
+        timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+        unique_id = str(uuid.uuid4())[:8]
+        file_name = f"{timestamp}_{unique_id}{ext}"
+        
+        year_month = datetime.datetime.now().strftime('%Y-%m')
+        year_month_path = os.path.join(config.UPLOAD_LOCAL_PATH, year_month)
+        os.makedirs(year_month_path, exist_ok=True)
+        
+        file_path = os.path.join(year_month_path, file_name)
+        file.save(file_path)
+        
+        file_size = os.path.getsize(file_path)
+        relative_path = f"upload/{year_month}/{file_name}"
+        full_url = f"{config.UPLOAD_LOCAL_BASE_URL}/{year_month}/{file_name}"
+        
+        record_id = add_upload_record(file_name, original_name, relative_path, file_size, 'local')
+        
+        return jsonify({
+            'success': True,
+            'code': 200,
+            'message': '上传成功',
+            'data': [full_url],
+            'record_id': record_id,
+            'file_name': file_name,
+            'original_name': original_name,
+            'file_size': file_size
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'code': 500, 'message': str(e)}), 500
+
+@app.route('/api/upload_records', methods=['GET'])
+@login_required
+def api_upload_records():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    
+    records = get_all_upload_records(page, per_page)
+    total = get_upload_records_count()
+    total_pages = (total + per_page - 1) // per_page
+    
+    records_list = []
+    for record in records:
+        records_list.append({
+            'id': record[0],
+            'file_name': record[1],
+            'original_name': record[2],
+            'file_path': record[3],
+            'file_size': record[4],
+            'storage_type': record[5],
+            'storage_time': record[6].isoformat() if record[6] else None,
+            'created_at': record[8].isoformat() if record[8] else None
+        })
+    
+    return jsonify({
+        'success': True,
+        'data': records_list,
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'total_pages': total_pages
+    })
+
+@app.route('/api/delete_upload_record/<int:record_id>', methods=['POST'])
+@login_required
+def api_delete_upload_record(record_id):
+    record = get_upload_record_by_id(record_id)
+    if not record:
+        return jsonify({'success': False, 'message': '记录不存在'})
+    
+    file_path = os.path.join(config.UPLOAD_LOCAL_PATH, record[3])
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            pass
+    
+    result = delete_upload_record(record_id)
+    if result:
+        return jsonify({'success': True, 'message': '删除成功'})
+    else:
+        return jsonify({'success': False, 'message': '删除失败'})
+
 @app.route('/reports')
+@login_required
 def reports():
     groups = get_all_groups()
     
@@ -538,10 +897,15 @@ def reports():
     total = get_reports_count(filter_type, filter_group, filter_date)
     total_pages = (total + per_page - 1) // per_page
     
+    if config.UPLOAD_TYPE == 'local':
+        base_url = config.UPLOAD_LOCAL_BASE_URL
+    else:
+        base_url = config.REPORT_STORAGE['base_url']
+    
     return render_template('reports.html', groups=groups, reports=reports, 
                            filter_type=filter_type, filter_group=filter_group, filter_date=filter_date, 
                            page=page, per_page=per_page, total=total, total_pages=total_pages, 
-                           base_url=config.REPORT_STORAGE['base_url'])
+                           base_url=base_url)
 
 @app.route('/api/generate_report', methods=['POST'])
 def api_generate_report():
@@ -583,54 +947,75 @@ def api_generate_report():
     doc.save(output)
     output.seek(0)
     
-    # 上传文件到文件服务器
+    # 上传文件
     file_path = None
     try:
-        # 重置文件指针
         output.seek(0)
         
-        # 调用文件上传服务（使用formData格式）
-        upload_url = config.FILE_UPLOAD_SERVICE['url']
-        print(f"开始上传文件到: {upload_url}")
-        print(f"文件名: {filename}")
-        
-        # 构建formData
-        files = {'files': (filename, output, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')}
-        
-        # 发送请求
-        response = requests.post(upload_url, files=files, timeout=config.FILE_UPLOAD_SERVICE['timeout'])
-        
-        print(f"上传响应状态码: {response.status_code}")
-        print(f"上传响应内容: {response.text}")
-        
-        # 解析上传响应
-        if response.status_code == 200:
-            try:
-                upload_result = response.json()
-                print(f"上传结果: {upload_result}")
-                # 从响应中获取文件路径
-                if upload_result.get('code') == 200 and upload_result.get('data'):
-                    # 假设data是一个数组，取第一个元素
-                    if isinstance(upload_result['data'], list) and upload_result['data']:
-                        file_path = upload_result['data'][0]
-                        print(f"获取到的文件路径: {file_path}")
-                    elif isinstance(upload_result['data'], str):
-                        file_path = upload_result['data']
-                        print(f"获取到的文件路径: {file_path}")
-            except Exception as json_error:
-                print(f"解析响应JSON失败: {json_error}")
+        if config.UPLOAD_TYPE == 'local':
+            ext = os.path.splitext(filename)[1]
+            timestamp = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+            unique_id = str(uuid.uuid4())[:8]
+            stored_filename = f"{timestamp}_{unique_id}{ext}"
+            
+            year_month = datetime.datetime.now().strftime('%Y-%m')
+            year_month_path = os.path.join(config.UPLOAD_LOCAL_PATH, year_month)
+            os.makedirs(year_month_path, exist_ok=True)
+            
+            file_full_path = os.path.join(year_month_path, stored_filename)
+            
+            with open(file_full_path, 'wb') as f:
+                f.write(output.getvalue())
+            
+            relative_path = f"upload/{year_month}/{stored_filename}"
+            file_path = f"{config.UPLOAD_LOCAL_BASE_URL}/{year_month}/{stored_filename}"
+            print(f"文件已保存到本地: {file_path}")
+            
+            add_upload_record(stored_filename, filename, relative_path, len(output.getvalue()), 'local')
+            db_file_path = relative_path
         else:
-            print(f"上传失败，状态码: {response.status_code}")
+            upload_url = config.FILE_UPLOAD_SERVICE['url']
+            print(f"开始上传文件到: {upload_url}")
+            print(f"文件名: {filename}")
+            
+            files = {'files': (filename, output, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')}
+            response = requests.post(upload_url, files=files, timeout=config.FILE_UPLOAD_SERVICE['timeout'])
+            
+            print(f"上传响应状态码: {response.status_code}")
+            print(f"上传响应内容: {response.text}")
+            
+            db_file_path = None
+            if response.status_code == 200:
+                try:
+                    upload_result = response.json()
+                    print(f"上传结果: {upload_result}")
+                    if upload_result.get('code') == 200 and upload_result.get('data'):
+                        if isinstance(upload_result['data'], list) and upload_result['data']:
+                            file_path = upload_result['data'][0]
+                        elif isinstance(upload_result['data'], str):
+                            file_path = upload_result['data']
+                        print(f"获取到的文件路径: {file_path}")
+                        
+                        if file_path and 'upload/' in file_path:
+                            db_file_path = file_path[file_path.find('upload/'):]
+                        else:
+                            db_file_path = file_path
+                except Exception as json_error:
+                    print(f"解析响应JSON失败: {json_error}")
+            else:
+                print(f"上传失败，状态码: {response.status_code}")
     except Exception as e:
         print(f"文件上传失败: {e}")
         import traceback
         traceback.print_exc()
+        db_file_path = None
     
     # 无论上传是否成功，都继续生成报告
     print(f"文件路径: {file_path}")
+    print(f"数据库存储路径: {db_file_path}")
     
     # 添加报告记录到数据库
-    add_report(report_type, group_id if group_id != 'all' else None, group_name, report_name, file_path)
+    add_report(report_type, group_id if group_id != 'all' else None, group_name, report_name, db_file_path)
     
     # 重置文件指针
     output.seek(0)
@@ -862,6 +1247,245 @@ def get_connection():
     import sqlite3
     from config import DATABASE_PATH
     return sqlite3.connect(DATABASE_PATH)
+
+# ========== 故障处置相关路由 ==========
+@app.route('/faults')
+@login_required
+def faults():
+    groups = get_all_groups()
+    
+    # 获取筛选参数
+    group_id = request.args.get('group_id')
+    fault_type = request.args.get('fault_type')
+    fault_level = request.args.get('fault_level')
+    start_time = request.args.get('start_time')
+    end_time = request.args.get('end_time')
+    keyword = request.args.get('keyword')
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
+    # 获取故障列表
+    faults_list = get_all_faults(page, per_page, group_id, fault_type, fault_level, start_time, end_time, keyword)
+    total = get_faults_count(group_id, fault_type, fault_level, start_time, end_time, keyword)
+    
+    return render_template('faults.html', 
+                         groups=groups, 
+                         faults=faults_list, 
+                         page=page, 
+                         per_page=per_page, 
+                         total=total)
+
+@app.route('/api/add_fault', methods=['POST'])
+@login_required
+def api_add_fault():
+    data = request.json
+    
+    group_id = data.get('group_id')
+    group_name = data.get('group_name')
+    event_name = data.get('event_name')
+    fault_level = data.get('fault_level')
+    fault_type = data.get('fault_type')
+    fault_description = data.get('fault_description')
+    occurrence_time = data.get('occurrence_time')
+    discoverer = data.get('discoverer')
+    
+    if not event_name or not fault_description or not occurrence_time or not discoverer:
+        return jsonify({'success': False, 'message': '必填字段不能为空'})
+    
+    fault_id = add_fault(group_id, group_name, event_name, fault_level, fault_type, fault_description, occurrence_time, discoverer)
+    if fault_id:
+        return jsonify({'success': True, 'message': '添加成功'})
+    else:
+        return jsonify({'success': False, 'message': '添加失败'})
+
+@app.route('/api/get_fault/<int:fault_id>')
+@login_required
+def api_get_fault(fault_id):
+    fault = get_fault_by_id(fault_id)
+    if fault:
+        return jsonify({'success': True, 'data': fault})
+    else:
+        return jsonify({'success': False, 'message': '记录不存在'})
+
+@app.route('/api/update_fault', methods=['POST'])
+@login_required
+def api_update_fault():
+    data = request.json
+    
+    fault_id = data.get('id')
+    if not fault_id:
+        return jsonify({'success': False, 'message': 'ID不能为空'})
+    
+    update_data = {}
+    if 'group_id' in data:
+        update_data['group_id'] = data['group_id']
+    if 'group_name' in data:
+        update_data['group_name'] = data['group_name']
+    if 'event_name' in data:
+        update_data['event_name'] = data['event_name']
+    if 'fault_level' in data:
+        update_data['fault_level'] = data['fault_level']
+    if 'fault_type' in data:
+        update_data['fault_type'] = data['fault_type']
+    if 'fault_description' in data:
+        update_data['fault_description'] = data['fault_description']
+    if 'occurrence_time' in data:
+        update_data['occurrence_time'] = data['occurrence_time']
+    if 'discoverer' in data:
+        update_data['discoverer'] = data['discoverer']
+    if 'processing_status' in data:
+        update_data['processing_status'] = data['processing_status']
+    if 'processing_person' in data:
+        update_data['processing_person'] = data['processing_person']
+    if 'processing_time' in data:
+        update_data['processing_time'] = data['processing_time']
+    if 'processing_description' in data:
+        update_data['processing_description'] = data['processing_description']
+    if 'report_path' in data:
+        update_data['report_path'] = data['report_path']
+    
+    result = update_fault(fault_id, **update_data)
+    if result:
+        return jsonify({'success': True, 'message': '更新成功'})
+    else:
+        return jsonify({'success': False, 'message': '更新失败'})
+
+@app.route('/api/delete_fault/<int:fault_id>')
+@login_required
+def api_delete_fault(fault_id):
+    result = delete_fault(fault_id)
+    if result:
+        return jsonify({'success': True, 'message': '删除成功'})
+    else:
+        return jsonify({'success': False, 'message': '删除失败'})
+
+def generate_fault_report(fault_data):
+    """生成故障处置报告"""
+    doc = Document()
+    
+    title = doc.add_heading('故障处置报告', level=1)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    
+    doc.add_paragraph()
+    
+    table = doc.add_table(rows=11, cols=4)
+    table.style = 'Table Grid'
+    
+    def set_label_and_content(cell, label, content=''):
+        if not cell.paragraphs:
+            p = cell.add_paragraph()
+        else:
+            p = cell.paragraphs[0]
+        run_label = p.add_run(label)
+        run_label.bold = True
+        if content:
+            p.add_run('\n' + content)
+    
+    set_label_and_content(table.cell(0, 0), '事件名称')
+    table.cell(0, 1).merge(table.cell(0, 3))
+    table.cell(0, 1).text = fault_data.get('event_name') or ''
+    
+    set_label_and_content(table.cell(1, 0), '事件时间')
+    table.cell(1, 1).merge(table.cell(1, 3))
+    table.cell(1, 1).text = fault_data.get('occurrence_time') or ''
+    
+    row2 = table.rows[2]
+    row2.cells[0].merge(row2.cells[3])
+    set_label_and_content(row2.cells[0], '故障事件描述：', fault_data.get('fault_description') or '')
+    
+    row3 = table.rows[3]
+    row3.cells[0].merge(row3.cells[3])
+    set_label_and_content(row3.cells[0], '发生原因分析：', fault_data.get('processing_description') or '')
+    
+    row4 = table.rows[4]
+    row4.cells[0].merge(row4.cells[3])
+    set_label_and_content(row4.cells[0], '影响范围：')
+    
+    row5 = table.rows[5]
+    row5.cells[0].merge(row5.cells[3])
+    set_label_and_content(row5.cells[0], '处置措施和过程：')
+    
+    row6 = table.rows[6]
+    row6.cells[0].merge(row6.cells[3])
+    set_label_and_content(row6.cells[0], '最终结果：', fault_data.get('processing_status') or '')
+    
+    row7 = table.rows[7]
+    row7.cells[0].merge(row7.cells[3])
+    set_label_and_content(row7.cells[0], '后续措施：')
+    
+    row8 = table.rows[8]
+    row8.cells[0].merge(row8.cells[3])
+    set_label_and_content(row8.cells[0], '相关建议：')
+    
+    set_label_and_content(table.cell(9, 0), '故障处理人员')
+    table.cell(9, 1).text = fault_data.get('processing_person') or ''
+    set_label_and_content(table.cell(9, 2), '审核人员')
+    table.cell(9, 3).text = fault_data.get('review_person') or ''
+    
+    set_label_and_content(table.cell(10, 0), '审核意见')
+    table.cell(10, 1).text = fault_data.get('review_comment') or ''
+    set_label_and_content(table.cell(10, 2), '审核时间')
+    table.cell(10, 3).text = datetime.datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')
+    
+    for i in range(2, 9):
+        table.rows[i].height = Pt(60)
+    
+    return doc
+
+@app.route('/api/review_fault', methods=['POST'])
+@login_required
+def api_review_fault():
+    data = request.json
+    
+    fault_id = data.get('fault_id')
+    review_person = data.get('review_person')
+    review_comment = data.get('review_comment')
+    
+    if not fault_id or not review_person or not review_comment:
+        return jsonify({'success': False, 'message': '参数不能为空'})
+    
+    fault = get_fault_by_id(fault_id)
+    if not fault:
+        return jsonify({'success': False, 'message': '故障记录不存在'})
+    
+    fault_dict = {
+        'id': fault[0],
+        'group_id': fault[1],
+        'group_name': fault[2],
+        'event_name': fault[3],
+        'fault_level': fault[4],
+        'fault_type': fault[5],
+        'fault_description': fault[6],
+        'occurrence_time': fault[7],
+        'discoverer': fault[8],
+        'processing_status': fault[9],
+        'processing_person': fault[10],
+        'processing_time': fault[11],
+        'processing_description': fault[12],
+        'review_status': '已审核',
+        'review_person': review_person,
+        'review_comment': review_comment
+    }
+    
+    doc = generate_fault_report(fault_dict)
+    
+    now = datetime.datetime.now()
+    year_month = now.strftime('%Y-%m')
+    upload_dir = os.path.join(config.UPLOAD_LOCAL_PATH, year_month)
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    filename = f"故障处置报告_{fault_id}_{now.strftime('%Y%m%d%H%M%S')}.docx"
+    file_path = os.path.join(upload_dir, filename)
+    
+    doc.save(file_path)
+    
+    relative_path = f"upload/{year_month}/{filename}"
+    
+    result = review_fault(fault_id, review_person, review_comment, relative_path)
+    if result:
+        return jsonify({'success': True, 'message': '审核成功，报告已生成'})
+    else:
+        return jsonify({'success': False, 'message': '审核失败'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=config.PORT)

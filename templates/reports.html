@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器巡检系统 - 巡检报告</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
     <style>
         * {
             margin: 0;
@@ -16,6 +17,16 @@
             display: flex;
             position: relative;
             overflow-x: hidden;
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+        }
+        /* 禁用原有背景动画 */
+        .bg-animation,
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3,
+        .snow-container,
+        .wind-gust {
+            display: none !important;
         }
         .bg-animation {
             position: fixed;
@@ -295,6 +306,49 @@
             background: rgba(102, 126, 234, 0.2);
             border-left: none;
         }
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 46, 0.95);
+        }
+        .sidebar-footer .current-time {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .sidebar-footer .logout-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-footer .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .sidebar-footer .logout-btn svg {
+            width: 16px;
+            height: 16px;
+        }
         .main-content {
             flex: 1;
             margin-left: 280px;
@@ -316,21 +370,6 @@
         .header-right {
             color: #a0aec0;
             font-size: 14px;
-        }
-        .current-time {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background: rgba(26, 26, 46, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         .search-bar {
             display: flex;
@@ -398,6 +437,14 @@
         .btn-add:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .btn-search {
+            background: rgba(34, 197, 94, 0.8);
+            color: #fff;
+        }
+        .btn-search:hover {
+            background: rgba(34, 197, 94, 1);
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
         }
         .btn-secondary {
             background: rgba(255, 255, 255, 0.15);
@@ -518,12 +565,12 @@
     </style>
 </head>
 <body>
+    <!-- 粒子背景容器 -->
+    <div id="particles-js"></div>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
     <div class="snow-container" id="snowContainer"></div>
     <div class="wind-gust"></div>
-    
-    <div class="current-time" id="currentTime"></div>
     
     {% include 'sidebar.html' %}
     
@@ -536,39 +583,25 @@
         
         <div class="search-bar">
             <select id="reportType">
-                <option value="daily">日报</option>
-                <option value="weekly">周报</option>
-                <option value="monthly">月报</option>
-            </select>
-            <select id="groupId">
-                <option value="all">所有分组</option>
-                {% for group in groups %}
-                <option value="{{ group[0] }}">{{ group[1] }}</option>
-                {% endfor %}
-            </select>
-            <input type="date" id="reportDate">
-            <button class="btn-add" onclick="generateReport()">+ 生成报告</button>
-        </div>
-        
-        <div class="search-bar">
-            <select id="filterType" onchange="filterReports()">
                 <option value="">报告类型</option>
                 <option value="daily" {{ 'selected' if filter_type == 'daily' else '' }}>日报</option>
                 <option value="weekly" {{ 'selected' if filter_type == 'weekly' else '' }}>周报</option>
                 <option value="monthly" {{ 'selected' if filter_type == 'monthly' else '' }}>月报</option>
             </select>
-            <select id="filterGroup" onchange="filterReports()">
-                <option value="">所有分组</option>
+            <select id="groupId">
+                <option value="all">所有分组</option>
                 {% for group in groups %}
                 <option value="{{ group[0] }}" {{ 'selected' if filter_group == group[0]|string else '' }}>{{ group[1] }}</option>
                 {% endfor %}
             </select>
-            <input type="date" id="filterDate" value="{{ filter_date }}" onchange="filterReports()">
+            <input type="date" id="reportDate" value="{{ filter_date }}">
+            <button class="btn-add" onclick="generateReport()">+ 生成报告</button>
+            <button class="btn-search" onclick="filterReports()">搜索</button>
             <button class="btn-reset" onclick="resetFilter()">重置</button>
         </div>
         
         <div class="table-container">
-            <h3 style="color: #fff; margin: 20px 0;">报告列表</h3>
+            <!-- <h3 style="color: #fff; margin: 20px 0;">报告列表</h3> -->
             {% if reports %}
             <table class="data-table">
                 <thead>
@@ -598,12 +631,20 @@
                         <td>
                             <div class="action-btns">
                                 {% if report[7] %}
-                                <a href="{{ base_url }}/{{ report[7] }}" class="action-btn btn-download" download>下载</a>
+                                    {% if report[7].startswith('http://') or report[7].startswith('https://') %}
+                                    <a href="{{ report[7] }}" class="action-btn btn-download" download>下载</a>
+                                    {% else %}
+                                    <a href="{{ base_url }}/{{ report[7] }}" class="action-btn btn-download" download>下载</a>
+                                    {% endif %}
                                 {% else %}
                                 <button class="action-btn btn-download" onclick="downloadReport('{{ report[1] }}', '{{ report[2] or 'all' }}')">下载</button>
                                 {% endif %}
                                 <!-- {% if report[7] %}
-                                <a href="https://docs.google.com/viewer?url={{ base_url }}/{{ report[7] }}" class="action-btn btn-download" target="_blank">在线查看</a>
+                                    {% if report[7].startswith('http://') or report[7].startswith('https://') %}
+                                    <a href="https://docs.google.com/viewer?url={{ report[7] }}" class="action-btn btn-download" target="_blank">在线查看</a>
+                                    {% else %}
+                                    <a href="https://docs.google.com/viewer?url={{ base_url }}/{{ report[7] }}" class="action-btn btn-download" target="_blank">在线查看</a>
+                                    {% endif %}
                                 {% endif %} -->
                                 <button class="action-btn btn-delete" onclick="deleteReport({{ report[0] }})">删除</button>
                             </div>
@@ -918,15 +959,15 @@
         }
 
         function filterReports() {
-            const filterType = document.getElementById('filterType').value;
-            const filterGroup = document.getElementById('filterGroup').value;
-            const filterDate = document.getElementById('filterDate').value;
+            const filterType = document.getElementById('reportType').value;
+            const filterGroup = document.getElementById('groupId').value;
+            const filterDate = document.getElementById('reportDate').value;
             
             let url = '/reports?';
             if (filterType) {
                 url += `report_type=${filterType}`;
             }
-            if (filterGroup) {
+            if (filterGroup && filterGroup !== 'all') {
                 url += url.includes('?') ? '&' : '?';
                 url += `group_id=${filterGroup}`;
             }
@@ -939,9 +980,9 @@
         }
 
         function resetFilter() {
-            document.getElementById('filterType').value = '';
-            document.getElementById('filterGroup').value = '';
-            document.getElementById('filterDate').value = '';
+            document.getElementById('reportType').value = '';
+            document.getElementById('groupId').value = 'all';
+            document.getElementById('reportDate').value = '';
             location.href = '/reports';
         }
 
@@ -1022,5 +1063,8 @@
             });
         }
     </script>
+    
+    <!-- 科技风特效JS -->
+    <script src="/static/js/tech-effects.js"></script>
 </body>
 </html>

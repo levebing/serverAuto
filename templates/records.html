@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器巡检系统 - 巡检记录列表</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
     <style>
         * {
             margin: 0;
@@ -16,6 +17,16 @@
             display: flex;
             position: relative;
             overflow-x: hidden;
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+        }
+        /* 禁用原有背景动画 */
+        .bg-animation,
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3,
+        .snow-container,
+        .wind-gust {
+            display: none !important;
         }
         .bg-animation {
             position: fixed;
@@ -295,27 +306,55 @@
             background: rgba(102, 126, 234, 0.2);
             border-left: none;
         }
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 46, 0.95);
+        }
+        .sidebar-footer .current-time {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .sidebar-footer .logout-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-footer .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .sidebar-footer .logout-btn svg {
+            width: 16px;
+            height: 16px;
+        }
         .main-content {
             flex: 1;
             margin-left: 280px;
             padding: 24px;
             position: relative;
             z-index: 5;
-        }
-        .current-time {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background: rgba(26, 26, 46, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         .header {
             display: flex;
@@ -414,12 +453,23 @@
             color: #fff;
             font-size: 13px;
             font-weight: 600;
+            white-space: nowrap;
+        }
+        .data-table th:nth-child(3) {
+            width: 40%;
         }
         .data-table td {
             padding: 14px 16px;
             color: #a0aec0;
             font-size: 14px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            white-space: nowrap;
+        }
+        .data-table td:nth-child(3) {
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .data-table tbody tr:hover {
             background: rgba(255, 255, 255, 0.05);
@@ -463,6 +513,84 @@
         .btn-delete {
             background: #ef4444;
             color: #fff;
+        }
+        .btn-view {
+            background: #3b82f6;
+            color: #fff;
+        }
+        .btn-view:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-overlay.show {
+            display: flex;
+        }
+        .modal {
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .modal-header h3 {
+            color: #fff;
+            font-size: 18px;
+            margin: 0;
+        }
+        .modal-close {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+        .modal-body {
+            padding: 24px;
+            max-height: calc(80vh - 120px);
+            overflow-y: auto;
+        }
+        .detail-item {
+            margin-bottom: 16px;
+        }
+        .detail-item label {
+            display: block;
+            color: #a0aec0;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .detail-item value {
+            display: block;
+            color: #fff;
+            font-size: 14px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            word-break: break-all;
         }
         .btn-delete:hover {
             background: #dc2626;
@@ -520,12 +648,12 @@
     </style>
 </head>
 <body>
+    <!-- 粒子背景容器 -->
+    <div id="particles-js"></div>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
     <div class="snow-container" id="snowContainer"></div>
     <div class="wind-gust"></div>
-    
-    <div class="current-time" id="currentTime"></div>
     
     {% include 'sidebar.html' %}
     
@@ -574,8 +702,9 @@
                         <td>{{ record[7] }}</td>
                         <td>
                             <div class="action-btns">
+                                <button class="action-btn btn-view" onclick="viewRecord({{ record[0] }})">查看</button>
                                 <a href="/download_report/{{ record[0] }}" class="action-btn btn-download">下载</a>
-                                <button class="action-btn btn-delete" onclick="deleteRecord({{ record[0] }})")>删除</button>
+                                <button class="action-btn btn-delete" onclick="deleteRecord({{ record[0] }})">删除</button>
                             </div>
                         </td>
                     </tr>
@@ -603,6 +732,18 @@
                 <a href="/">立即巡检</a>
             </div>
             {% endif %}
+        </div>
+    </div>
+    
+    <!-- 详情模态框 -->
+    <div class="modal-overlay" id="recordModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>📋 巡检详情</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalContent">
+            </div>
         </div>
     </div>
     
@@ -778,6 +919,83 @@
                 location.href = '/delete_record/' + recordId;
             }
         }
+        
+        function viewRecord(recordId) {
+            fetch('/api/get_record_detail/' + recordId)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const record = data.record;
+                        let content = `
+                            <div class="detail-item">
+                                <label>服务器名称</label>
+                                <value>${record.server_name || '未知'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>服务器IP</label>
+                                <value>${record.server_ip || '未知'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>分组</label>
+                                <value>${record.group_name || '默认分组'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>CPU使用率</label>
+                                <value>${record.cpu_usage || '未记录'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>内存使用</label>
+                                <value>${record.memory_usage || '未记录'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>磁盘使用</label>
+                                <value>${record.disk_usage || '未记录'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>系统时间</label>
+                                <value>${record.system_time || '未记录'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>操作系统版本</label>
+                                <value>${record.os_version || '未记录'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>告警内容</label>
+                                <value>${record.alert_content || '无告警'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>巡检结果</label>
+                                <value>${record.inspection_result || '未记录'}</value>
+                            </div>
+                            <div class="detail-item">
+                                <label>巡检时间</label>
+                                <value>${record.inspection_time || '未记录'}</value>
+                            </div>
+                        `;
+                        document.getElementById('modalContent').innerHTML = content;
+                        document.getElementById('recordModal').classList.add('show');
+                    } else {
+                        alert('获取详情失败');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('获取详情失败');
+                });
+        }
+        
+        function closeModal() {
+            document.getElementById('recordModal').classList.remove('show');
+        }
+        
+        document.getElementById('recordModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
     </script>
+    
+    <!-- 科技风特效JS -->
+    <script src="/static/js/tech-effects.js"></script>
 </body>
 </html>

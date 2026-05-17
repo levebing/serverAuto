@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器巡检系统 - 服务器管理列表</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
     <style>
         * {
             margin: 0;
@@ -16,6 +17,16 @@
             display: flex;
             position: relative;
             overflow-x: hidden;
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+        }
+        /* 禁用原有背景动画 */
+        .bg-animation,
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3,
+        .snow-container,
+        .wind-gust {
+            display: none !important;
         }
         .bg-animation {
             position: fixed;
@@ -295,6 +306,49 @@
             background: rgba(102, 126, 234, 0.2);
             border-left: none;
         }
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 46, 0.95);
+        }
+        .sidebar-footer .current-time {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .sidebar-footer .logout-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-footer .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .sidebar-footer .logout-btn svg {
+            width: 16px;
+            height: 16px;
+        }
         .main-content {
             flex: 1;
             margin-left: 280px;
@@ -316,21 +370,6 @@
         .header-right {
             color: #a0aec0;
             font-size: 14px;
-        }
-        .current-time {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background: rgba(26, 26, 46, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         .search-bar {
             background: rgba(255, 255, 255, 0.05);
@@ -631,12 +670,12 @@
     </style>
 </head>
 <body>
+    <!-- 粒子背景容器 -->
+    <div id="particles-js"></div>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
     <div class="snow-container" id="snowContainer"></div>
     <div class="wind-gust"></div>
-    
-    <div class="current-time" id="currentTime"></div>
     
     {% include 'sidebar.html' %}
     
@@ -668,6 +707,7 @@
                         <th>服务名称</th>
                         <th>IP地址</th>
                         <th>分组</th>
+                        <th>操作系统</th>
                         <th>端口/用户</th>
                         <th>备注</th>
                         <th>操作</th>
@@ -679,6 +719,7 @@
                         <td>{{ server[1] }}</td>
                         <td>{{ server[2] }}</td>
                         <td>{{ server[6] or '-' }}</td>
+                        <td><span class="os-badge os-{{ server[8] or 'linux' }}">{% if server[8] == 'windows' %}Windows{% else %}Linux{% endif %}</span></td>
                         <td>{{ server[3] }}/{{ server[4] }}</td>
                         <td>{{ server[7] or '-' }}</td>
                         <td>
@@ -984,5 +1025,8 @@
             }
         });
     </script>
+    
+    <!-- 科技风特效JS -->
+    <script src="/static/js/tech-effects.js"></script>
 </body>
 </html>

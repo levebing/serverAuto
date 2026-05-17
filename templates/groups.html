@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>服务器巡检系统 - 分组管理</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
     <style>
         * {
             margin: 0;
@@ -16,6 +17,16 @@
             display: flex;
             position: relative;
             overflow-x: hidden;
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+        }
+        /* 禁用原有背景动画 */
+        .bg-animation,
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3,
+        .snow-container,
+        .wind-gust {
+            display: none !important;
         }
         .bg-animation {
             position: fixed;
@@ -295,6 +306,49 @@
             background: rgba(102, 126, 234, 0.2);
             border-left: none;
         }
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 46, 0.95);
+        }
+        .sidebar-footer .current-time {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .sidebar-footer .logout-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-footer .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .sidebar-footer .logout-btn svg {
+            width: 16px;
+            height: 16px;
+        }
         .main-content {
             flex: 1;
             margin-left: 280px;
@@ -316,21 +370,6 @@
         .header-right {
             color: #a0aec0;
             font-size: 14px;
-        }
-        .current-time {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 10px 20px;
-            background: rgba(26, 26, 46, 0.9);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 16px;
-            font-family: 'Courier New', monospace;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
         .search-bar {
             background: rgba(255, 255, 255, 0.05);
@@ -492,7 +531,7 @@
             display: none;
             position: fixed;
             top: 0;
-            left: 0;
+            left: 280px;
             right: 0;
             bottom: 0;
             background: rgba(0, 0, 0, 0.7);
@@ -605,12 +644,12 @@
     </style>
 </head>
 <body>
+    <!-- 粒子背景容器 -->
+    <div id="particles-js"></div>
     <div class="bg-animation"></div>
     <div class="bg-grid"></div>
     <div class="snow-container" id="snowContainer"></div>
     <div class="wind-gust"></div>
-    
-    <div class="current-time" id="currentTime"></div>
     
     {% include 'sidebar.html' %}
     
@@ -622,8 +661,9 @@
         </div>
         
         <div class="search-bar">
-            <input type="text" id="group_name" placeholder="请输入分组名称">
-            <button class="btn-add" onclick="addGroup()">+ 添加分组</button>
+            <input type="text" id="searchKeyword" placeholder="请输入分组名称" onkeyup="searchGroups()">
+            <button class="btn-search" onclick="searchGroups()">搜索</button>
+            <button class="btn-add" onclick="showAddModal()">+ 添加分组</button>
         </div>
         
         <div class="table-container">
@@ -632,6 +672,7 @@
                 <thead>
                     <tr>
                         <th>分组名称</th>
+                        <th>上级分组</th>
                         <th>排序</th>
                         <th>操作</th>
                     </tr>
@@ -641,12 +682,20 @@
                     <tr>
                         <td>{{ group[1] }}</td>
                         <td>
+                            {% if group[3] %}
+                                {% set parent_group = groups|selectattr('0', 'equalto', group[3])|first %}
+                                {{ parent_group[1] if parent_group else '-' }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
                             <input type="number" class="sort-input" value="{{ group[2] }}" onchange="updateSort({{ group[0] }}, this.value)">
                         </td>
                         <td>
                             <div class="action-btns">
                                 {% if group[0] != 1 %}
-                                <button class="action-btn btn-edit" onclick="editGroup({{ group[0] }}, '{{ group[1] }}')">编辑</button>
+                                <button class="action-btn btn-edit" onclick="editGroup({{ group[0] }}, '{{ group[1] }}', {{ group[2] }}, {{ group[3] or 'null' }})">编辑</button>
                                 <button class="action-btn btn-delete" onclick="deleteGroup({{ group[0] }})">删除</button>
                                 {% else %}
                                 <span style="color: #6b7280; font-size: 12px;">默认分组</span>
@@ -672,20 +721,57 @@
         </div>
     </div>
     
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加分组</h3>
+            </div>
+            <div id="addAlertMessage" class="alert" style="display: none;"></div>
+            <div class="form-group">
+                <label for="addGroupName">分组名称</label>
+                <input type="text" id="addGroupName" placeholder="请输入分组名称">
+            </div>
+            <div class="form-group">
+                <label for="addSortOrder">排序</label>
+                <input type="number" id="addSortOrder" placeholder="请输入排序序号" value="0">
+            </div>
+            <div class="form-group">
+                <label for="addParentId">上级分组</label>
+                <select id="addParentId">
+                    <option value="0">无（顶级分组）</option>
+                </select>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-secondary" onclick="closeAddModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitAddGroup()">保存</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="modal" id="editModal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>编辑分组</h3>
             </div>
-            <div id="alertMessage" class="alert" style="display: none;"></div>
+            <div id="editAlertMessage" class="alert" style="display: none;"></div>
             <div class="form-group">
                 <label for="editGroupName">分组名称</label>
                 <input type="text" id="editGroupName" placeholder="请输入分组名称">
             </div>
+            <div class="form-group">
+                <label for="editSortOrder">排序</label>
+                <input type="number" id="editSortOrder" placeholder="请输入排序序号">
+            </div>
+            <div class="form-group">
+                <label for="editParentId">上级分组</label>
+                <select id="editParentId">
+                    <option value="0">无（顶级分组）</option>
+                </select>
+            </div>
             <input type="hidden" id="editGroupId">
             <div class="form-actions">
-                <button class="btn btn-secondary" onclick="closeModal()">取消</button>
-                <button class="btn btn-primary" onclick="saveGroup()">保存</button>
+                <button class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+                <button class="btn btn-primary" onclick="submitEditGroup()">保存</button>
             </div>
         </div>
     </div>
@@ -799,10 +885,115 @@
         `;
         document.head.appendChild(styleSheet);
 
-        function addGroup() {
-            const name = document.getElementById('group_name').value.trim();
+        function loadParentGroups(selectId, excludeId = null) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '<option value="0">无（顶级分组）</option>';
+            
+            fetch('/api/search_groups')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    data.data.forEach(group => {
+                        if (group[0] != excludeId && group[0] != 1) {
+                            const option = document.createElement('option');
+                            option.value = group[0];
+                            option.textContent = group[1];
+                            select.appendChild(option);
+                        }
+                    });
+                }
+            });
+        }
+
+        function searchGroups() {
+            const keyword = document.getElementById('searchKeyword').value.trim();
+            
+            fetch(`/api/search_groups?keyword=${encodeURIComponent(keyword)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    renderGroups(data.data);
+                }
+            })
+            .catch(error => {
+                console.error('搜索失败:', error);
+            });
+        }
+
+        function renderGroups(groups) {
+            const tableBody = document.querySelector('.data-table tbody');
+            const paginationInfo = document.querySelector('.pagination-info');
+            
+            if (groups.length === 0) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 40px;">
+                            <div class="empty-state">
+                                <h3>暂无分组</h3>
+                                <p>点击上方按钮添加您的第一个分组</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                paginationInfo.textContent = '共 0 条记录';
+                return;
+            }
+            
+            let html = '';
+            groups.forEach(group => {
+                const parentName = group[3] ? getParentName(groups, group[3]) : '-';
+                const canEdit = group[0] != 1;
+                
+                html += `
+                    <tr>
+                        <td>${group[1]}</td>
+                        <td>${parentName}</td>
+                        <td>
+                            <input type="number" class="sort-input" value="${group[2]}" onchange="updateSort(${group[0]}, this.value)">
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                ${canEdit ? `
+                                <button class="action-btn btn-edit" onclick="editGroup(${group[0]}, '${group[1]}', ${group[2]}, ${group[3] || 'null'})">编辑</button>
+                                <button class="action-btn btn-delete" onclick="deleteGroup(${group[0]})">删除</button>
+                                ` : '<span style="color: #6b7280; font-size: 12px;">默认分组</span>'}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            tableBody.innerHTML = html;
+            paginationInfo.textContent = `共 ${groups.length} 条记录`;
+        }
+
+        function getParentName(groups, parentId) {
+            const parent = groups.find(g => g[0] == parentId);
+            return parent ? parent[1] : '-';
+        }
+
+        function showAddModal() {
+            document.getElementById('addGroupName').value = '';
+            document.getElementById('addSortOrder').value = '0';
+            document.getElementById('addAlertMessage').style.display = 'none';
+            loadParentGroups('addParentId');
+            document.getElementById('addModal').classList.add('show');
+        }
+
+        function closeAddModal() {
+            document.getElementById('addModal').classList.remove('show');
+        }
+
+        function submitAddGroup() {
+            const name = document.getElementById('addGroupName').value.trim();
+            const sortOrder = parseInt(document.getElementById('addSortOrder').value) || 0;
+            const parentId = document.getElementById('addParentId').value;
+            const alertMessage = document.getElementById('addAlertMessage');
+            
             if (!name) {
-                alert('请输入分组名称');
+                alertMessage.className = 'alert alert-error';
+                alertMessage.textContent = '请输入分组名称';
+                alertMessage.style.display = 'block';
                 return;
             }
             
@@ -811,18 +1002,26 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name: name })
+                body: JSON.stringify({ 
+                    name: name,
+                    sort_order: sortOrder,
+                    parent_id: parentId === '0' ? null : parentId
+                })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     location.reload();
                 } else {
-                    alert(data.message);
+                    alertMessage.className = 'alert alert-error';
+                    alertMessage.textContent = data.message;
+                    alertMessage.style.display = 'block';
                 }
             })
             .catch(error => {
-                alert('网络错误');
+                alertMessage.className = 'alert alert-error';
+                alertMessage.textContent = '网络错误';
+                alertMessage.style.display = 'block';
             });
         }
 
@@ -845,21 +1044,37 @@
             });
         }
 
-        function editGroup(groupId, groupName) {
+        function editGroup(groupId, groupName, sortOrder, parentId) {
             document.getElementById('editGroupId').value = groupId;
             document.getElementById('editGroupName').value = groupName;
-            document.getElementById('alertMessage').style.display = 'none';
+            document.getElementById('editSortOrder').value = sortOrder;
+            document.getElementById('editAlertMessage').style.display = 'none';
+            loadParentGroups('editParentId', groupId);
+            
+            if (parentId !== null && parentId !== 'null') {
+                document.getElementById('editParentId').value = parentId;
+            } else {
+                document.getElementById('editParentId').value = '0';
+            }
+            
             document.getElementById('editModal').classList.add('show');
         }
 
-        function closeModal() {
+        function closeEditModal() {
             document.getElementById('editModal').classList.remove('show');
         }
 
-        function saveGroup() {
+        function submitEditGroup() {
             const groupId = document.getElementById('editGroupId').value;
             const name = document.getElementById('editGroupName').value.trim();
-            const alertMessage = document.getElementById('alertMessage');
+            const sortOrder = document.getElementById('editSortOrder').value;
+            const parentId = document.getElementById('editParentId').value;
+            const alertMessage = document.getElementById('editAlertMessage');
+            
+            const data = { group_id: groupId };
+            if (name) data.name = name;
+            if (sortOrder !== '') data.sort_order = parseInt(sortOrder);
+            if (parentId !== '') data.parent_id = parentId === '0' ? null : parentId;
             
             if (!name) {
                 alertMessage.className = 'alert alert-error';
@@ -873,7 +1088,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ group_id: groupId, name: name })
+                body: JSON.stringify(data)
             })
             .then(response => response.json())
             .then(data => {
@@ -911,11 +1126,20 @@
             });
         }
 
+        document.getElementById('addModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeAddModal();
+            }
+        });
+
         document.getElementById('editModal').addEventListener('click', function(e) {
             if (e.target === this) {
-                closeModal();
+                closeEditModal();
             }
         });
     </script>
+    
+    <!-- 科技风特效JS -->
+    <script src="/static/js/tech-effects.js"></script>
 </body>
 </html>
