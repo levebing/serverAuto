@@ -301,6 +301,43 @@ def init_db():
                 VALUES (?, ?, ?, ?)
             ''', item)
     
+    # 告警通知配置表
+    cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS alert_configs (
+            id {_get_primary_key_syntax()},
+            provider TEXT NOT NULL,
+            is_enabled INTEGER DEFAULT 1,
+            access_key_id TEXT,
+            access_key_secret TEXT,
+            secret_id TEXT,
+            secret_key TEXT,
+            sign_name TEXT NOT NULL,
+            app_id TEXT,
+            inspection_template_code TEXT,
+            fault_template_code TEXT,
+            system_template_code TEXT,
+            phone_numbers TEXT NOT NULL,
+            custom_api_url TEXT,
+            custom_headers TEXT,
+            created_at {_get_timestamp_syntax()},
+            updated_at {_get_timestamp_syntax()}
+        )
+    ''')
+    
+    # 告警记录表
+    cursor.execute(f'''
+        CREATE TABLE IF NOT EXISTS alert_logs (
+            id {_get_primary_key_syntax()},
+            alert_type TEXT NOT NULL,
+            alert_title TEXT NOT NULL,
+            alert_content TEXT,
+            phone_numbers TEXT NOT NULL,
+            send_status TEXT NOT NULL,
+            send_result TEXT,
+            created_at {_get_timestamp_syntax()}
+        )
+    ''')
+    
     conn.commit()
     conn.close()
 
@@ -1129,5 +1166,128 @@ def review_fault(fault_id, review_person, review_comment, report_path=None):
     rows_affected = cursor.rowcount
     conn.close()
     return rows_affected > 0
+
+# ==================== 告警通知配置相关函数 ====================
+
+def get_alert_config():
+    """获取告警通知配置"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM alert_configs ORDER BY id DESC LIMIT 1')
+    config = cursor.fetchone()
+    conn.close()
+    return config
+
+def save_alert_config(provider, is_enabled, access_key_id, access_key_secret, 
+                      secret_id, secret_key, sign_name, app_id,
+                      inspection_template_code, fault_template_code, system_template_code,
+                      phone_numbers, custom_api_url=None, custom_headers=None):
+    """保存告警通知配置"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # 检查是否已有配置
+    cursor.execute('SELECT id FROM alert_configs ORDER BY id DESC LIMIT 1')
+    existing = cursor.fetchone()
+    
+    if existing:
+        # 更新配置
+        cursor.execute('''
+            UPDATE alert_configs SET 
+                provider = %s, is_enabled = %s, access_key_id = %s, access_key_secret = %s,
+                secret_id = %s, secret_key = %s, sign_name = %s, app_id = %s,
+                inspection_template_code = %s, fault_template_code = %s, system_template_code = %s,
+                phone_numbers = %s, custom_api_url = %s, custom_headers = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+        ''' if DATABASE_TYPE != 'sqlite' else '''
+            UPDATE alert_configs SET 
+                provider = ?, is_enabled = ?, access_key_id = ?, access_key_secret = ?,
+                secret_id = ?, secret_key = ?, sign_name = ?, app_id = ?,
+                inspection_template_code = ?, fault_template_code = ?, system_template_code = ?,
+                phone_numbers = ?, custom_api_url = ?, custom_headers = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (provider, is_enabled, access_key_id, access_key_secret,
+              secret_id, secret_key, sign_name, app_id,
+              inspection_template_code, fault_template_code, system_template_code,
+              phone_numbers, custom_api_url, custom_headers, existing[0]))
+    else:
+        # 插入新配置
+        cursor.execute('''
+            INSERT INTO alert_configs (
+                provider, is_enabled, access_key_id, access_key_secret,
+                secret_id, secret_key, sign_name, app_id,
+                inspection_template_code, fault_template_code, system_template_code,
+                phone_numbers, custom_api_url, custom_headers, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ''' if DATABASE_TYPE != 'sqlite' else '''
+            INSERT INTO alert_configs (
+                provider, is_enabled, access_key_id, access_key_secret,
+                secret_id, secret_key, sign_name, app_id,
+                inspection_template_code, fault_template_code, system_template_code,
+                phone_numbers, custom_api_url, custom_headers, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ''', (provider, is_enabled, access_key_id, access_key_secret,
+              secret_id, secret_key, sign_name, app_id,
+              inspection_template_code, fault_template_code, system_template_code,
+              phone_numbers, custom_api_url, custom_headers))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+def add_alert_log(alert_type, alert_title, alert_content, phone_numbers, send_status, send_result=None):
+    """添加告警记录"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO alert_logs (alert_type, alert_title, alert_content, phone_numbers, send_status, send_result, created_at)
+        VALUES (%s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+    ''' if DATABASE_TYPE != 'sqlite' else '''
+        INSERT INTO alert_logs (alert_type, alert_title, alert_content, phone_numbers, send_status, send_result, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ''', (alert_type, alert_title, alert_content, phone_numbers, send_status, send_result))
+    conn.commit()
+    log_id = cursor.lastrowid
+    conn.close()
+    return log_id
+
+def get_alert_logs(page=1, per_page=10):
+    """获取告警记录列表"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    offset = (page - 1) * per_page
+    
+    if DATABASE_TYPE == 'postgresql':
+        cursor.execute('''
+            SELECT * FROM alert_logs 
+            ORDER BY created_at DESC 
+            LIMIT %s OFFSET %s
+        ''', (per_page, offset))
+    elif DATABASE_TYPE != 'sqlite':
+        cursor.execute('''
+            SELECT * FROM alert_logs 
+            ORDER BY created_at DESC 
+            LIMIT %s OFFSET %s
+        ''', (per_page, offset))
+    else:
+        cursor.execute('''
+            SELECT * FROM alert_logs 
+            ORDER BY created_at DESC 
+            LIMIT ? OFFSET ?
+        ''', (per_page, offset))
+    
+    logs = cursor.fetchall()
+    conn.close()
+    return logs
+
+def get_alert_logs_count():
+    """获取告警记录总数"""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT COUNT(*) FROM alert_logs')
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
 
 init_db()

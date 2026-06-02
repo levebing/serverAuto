@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response, session
 from flask_cors import CORS
-from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item, get_inspection_items_count, get_user_by_username, update_user_password, add_upload_record, get_upload_record_by_id, get_all_upload_records, get_upload_records_count, delete_upload_record, get_upload_records_by_file_path, add_fault, get_all_faults, get_faults_count, get_fault_by_id, update_fault, delete_fault, review_fault
+from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item, get_inspection_items_count, get_user_by_username, update_user_password, add_upload_record, get_upload_record_by_id, get_all_upload_records, get_upload_records_count, delete_upload_record, get_upload_records_by_file_path, add_fault, get_all_faults, get_faults_count, get_fault_by_id, update_fault, delete_fault, review_fault, get_alert_config, save_alert_config, add_alert_log, get_alert_logs, get_alert_logs_count
 from encryption import decrypt_password
 from inspection import ServerInspector
 from windows_inspection import WindowsServerInspector
@@ -322,6 +322,13 @@ def inspect(server_id):
         inspection_result=inspection_result,
         inspection_time=result['inspection_time']
     )
+    
+    # 触发短信告警（如果有告警内容）
+    if result.get('alert_content') and result['alert_content'] != '无告警':
+        try:
+            send_inspection_alert_sms(server, result)
+        except Exception as e:
+            print(f"短信告警发送失败: {e}")
     
     groups = get_all_groups()
     return render_template('inspect.html', server=server, result=result, groups=groups)
@@ -1486,6 +1493,292 @@ def api_review_fault():
         return jsonify({'success': True, 'message': '审核成功，报告已生成'})
     else:
         return jsonify({'success': False, 'message': '审核失败'})
+
+# ==================== 短信告警功能 ====================
+
+def send_inspection_alert_sms(server, result):
+    """
+    发送巡检告警短信
+    :param server: 服务器信息
+    :param result: 巡检结果
+    """
+    from sms_notifier import send_alert_sms
+    
+    # 获取告警配置
+    config = get_alert_config()
+    if not config or not config[2]:  # is_enabled
+        return
+    
+    # 构建配置字典
+    sms_config = {
+        'provider': config[1],
+        'sign_name': config[7],
+        'inspection_template_code': config[9],
+        'phone_numbers': config[12]
+    }
+    
+    if config[1] == 'aliyun':
+        sms_config['access_key_id'] = config[3]
+        sms_config['access_key_secret'] = config[4]
+    elif config[1] == 'tencent':
+        sms_config['secret_id'] = config[5]
+        sms_config['secret_key'] = config[6]
+        sms_config['app_id'] = config[8]
+    elif config[1] == 'baidu':
+        sms_config['access_key_id'] = config[3]
+        sms_config['secret_access_key'] = config[4]
+    
+    # 解析告警内容
+    alert_content = result.get('alert_content', '')
+    alert_items = []
+    
+    # 提取告警项
+    if 'CPU' in alert_content:
+        cpu_match = alert_content.split('CPU使用率超过阈值')[0] if 'CPU使用率超过阈值' in alert_content else ''
+        if cpu_match:
+            alert_items.append('CPU使用率')
+    
+    if '内存' in alert_content:
+        alert_items.append('内存使用率')
+    
+    if '磁盘' in alert_content:
+        alert_items.append('磁盘使用率')
+    
+    alert_item_str = '、'.join(alert_items) if alert_items else '系统资源'
+    
+    # 获取告警值
+    alert_value = '超过阈值'
+    if result.get('cpu_usage'):
+        try:
+            cpu_val = float(result['cpu_usage'])
+            if cpu_val > config.MAX_ALERT_THRESHOLD:
+                alert_value = f"CPU {cpu_val}%"
+        except:
+            pass
+    
+    # 构建告警数据
+    alert_data = {
+        'server_name': server[1],
+        'server_ip': server[2],
+        'alert_item': alert_item_str,
+        'alert_value': alert_value,
+        'threshold': str(config.MAX_ALERT_THRESHOLD),
+        'time': datetime.datetime.now().strftime('%Y-%m-%d %H:%M')
+    }
+    
+    # 发送短信
+    success, message = send_alert_sms(
+        phone_numbers=config[12],
+        alert_type='inspection',
+        alert_data=alert_data,
+        config=sms_config
+    )
+    
+    # 记录发送日志
+    add_alert_log(
+        alert_type='inspection',
+        alert_title=f"服务器巡检告警 - {server[1]}",
+        alert_content=alert_content,
+        phone_numbers=config[12],
+        send_status='成功' if success else '失败',
+        send_result=message
+    )
+
+def send_fault_alert_sms(fault_data):
+    """
+    发送故障告警短信
+    :param fault_data: 故障数据字典
+    """
+    from sms_notifier import send_alert_sms
+    
+    # 获取告警配置
+    config = get_alert_config()
+    if not config or not config[2]:  # is_enabled
+        return
+    
+    # 构建配置字典
+    sms_config = {
+        'provider': config[1],
+        'sign_name': config[7],
+        'fault_template_code': config[10],
+        'phone_numbers': config[12]
+    }
+    
+    if config[1] == 'aliyun':
+        sms_config['access_key_id'] = config[3]
+        sms_config['access_key_secret'] = config[4]
+    elif config[1] == 'tencent':
+        sms_config['secret_id'] = config[5]
+        sms_config['secret_key'] = config[6]
+        sms_config['app_id'] = config[8]
+    elif config[1] == 'baidu':
+        sms_config['access_key_id'] = config[3]
+        sms_config['secret_access_key'] = config[4]
+    
+    # 发送短信
+    success, message = send_alert_sms(
+        phone_numbers=config[12],
+        alert_type='fault',
+        alert_data=fault_data,
+        config=sms_config
+    )
+    
+    # 记录发送日志
+    add_alert_log(
+        alert_type='fault',
+        alert_title=f"故障告警 - {fault_data.get('fault_name', '')}",
+        alert_content=fault_data.get('description', ''),
+        phone_numbers=config[12],
+        send_status='成功' if success else '失败',
+        send_result=message
+    )
+
+# ==================== 告警通知配置路由 ====================
+
+@app.route('/alert_config')
+@login_required
+def alert_config():
+    """告警通知配置页面"""
+    config = get_alert_config()
+    return render_template('alert_config.html', config=config)
+
+@app.route('/alert_config', methods=['POST'])
+@login_required
+def alert_config_save():
+    """保存告警通知配置"""
+    try:
+        provider = request.form.get('provider', '').strip()
+        is_enabled = 1 if request.form.get('is_enabled') else 0
+        phone_numbers = request.form.get('phone_numbers', '').strip()
+        
+        # 根据服务商获取对应的配置字段
+        access_key_id = ''
+        access_key_secret = ''
+        secret_id = ''
+        secret_key = ''
+        sign_name = ''
+        app_id = ''
+        
+        if provider == 'aliyun':
+            access_key_id = request.form.get('access_key_id', '').strip()
+            access_key_secret = request.form.get('access_key_secret', '').strip()
+            sign_name = request.form.get('sign_name', '').strip()
+        elif provider == 'tencent':
+            secret_id = request.form.get('secret_id', '').strip()
+            secret_key = request.form.get('secret_key', '').strip()
+            sign_name = request.form.get('sign_name_tencent', '').strip()
+            app_id = request.form.get('app_id', '').strip()
+        elif provider == 'baidu':
+            access_key_id = request.form.get('access_key_id_baidu', '').strip()
+            access_key_secret = request.form.get('secret_access_key', '').strip()
+            sign_name = request.form.get('sign_name_baidu', '').strip()
+        elif provider == 'custom':
+            sign_name = request.form.get('sign_name', '').strip()
+        
+        inspection_template_code = request.form.get('inspection_template_code', '').strip()
+        fault_template_code = request.form.get('fault_template_code', '').strip()
+        system_template_code = request.form.get('system_template_code', '').strip()
+        
+        custom_api_url = request.form.get('custom_api_url', '').strip()
+        custom_headers = request.form.get('custom_headers', '').strip()
+        
+        save_alert_config(
+            provider=provider,
+            is_enabled=is_enabled,
+            access_key_id=access_key_id,
+            access_key_secret=access_key_secret,
+            secret_id=secret_id,
+            secret_key=secret_key,
+            sign_name=sign_name,
+            app_id=app_id,
+            inspection_template_code=inspection_template_code,
+            fault_template_code=fault_template_code,
+            system_template_code=system_template_code,
+            phone_numbers=phone_numbers,
+            custom_api_url=custom_api_url,
+            custom_headers=custom_headers
+        )
+        
+        config = get_alert_config()
+        return render_template('alert_config.html', config=config, message='配置保存成功', success=True)
+    except Exception as e:
+        config = get_alert_config()
+        return render_template('alert_config.html', config=config, message=f'保存失败: {str(e)}', success=False)
+
+@app.route('/api/test_sms', methods=['POST'])
+@login_required
+def api_test_sms():
+    """测试短信发送"""
+    try:
+        from sms_notifier import get_sms_notifier, send_alert_sms
+        
+        provider = request.form.get('provider', '').strip()
+        phone_numbers = request.form.get('phone_numbers', '').strip()
+        
+        if not provider or not phone_numbers:
+            return jsonify({'success': False, 'message': '请填写完整配置信息'})
+        
+        # 构建配置字典
+        config = {
+            'provider': provider,
+            'sign_name': request.form.get('sign_name') or request.form.get('sign_name_tencent') or request.form.get('sign_name_baidu', '').strip()
+        }
+        
+        if provider == 'aliyun':
+            config['access_key_id'] = request.form.get('access_key_id', '').strip()
+            config['access_key_secret'] = request.form.get('access_key_secret', '').strip()
+        elif provider == 'tencent':
+            config['secret_id'] = request.form.get('secret_id', '').strip()
+            config['secret_key'] = request.form.get('secret_key', '').strip()
+            config['app_id'] = request.form.get('app_id', '').strip()
+        elif provider == 'baidu':
+            config['access_key_id'] = request.form.get('access_key_id_baidu', '').strip()
+            config['secret_access_key'] = request.form.get('secret_access_key', '').strip()
+        elif provider == 'custom':
+            config['custom_api_url'] = request.form.get('custom_api_url', '').strip()
+            config['custom_headers'] = request.form.get('custom_headers', '').strip()
+        
+        # 使用系统告警模板发送测试短信
+        config['system_template_code'] = request.form.get('system_template_code', '').strip()
+        
+        if not config['system_template_code']:
+            return jsonify({'success': False, 'message': '请先配置系统告警模板代码'})
+        
+        # 发送测试短信
+        alert_data = {
+            'alert_title': '测试告警',
+            'alert_content': '这是一条测试短信，用于验证告警通知配置是否正确。',
+            'time': datetime.now().strftime('%Y-%m-%d %H:%M')
+        }
+        
+        success, message = send_alert_sms(phone_numbers, 'system', alert_data, config)
+        
+        # 记录发送日志
+        add_alert_log(
+            alert_type='system',
+            alert_title='测试短信',
+            alert_content=alert_data['alert_content'],
+            phone_numbers=phone_numbers,
+            send_status='成功' if success else '失败',
+            send_result=message
+        )
+        
+        return jsonify({'success': success, 'message': message})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'message': f'测试发送失败: {str(e)}'})
+
+@app.route('/alert_logs')
+@login_required
+def alert_logs():
+    """告警记录页面"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 10
+    
+    logs = get_alert_logs(page=page, per_page=per_page)
+    total = get_alert_logs_count()
+    
+    return render_template('alert_logs.html', logs=logs, page=page, per_page=per_page, total=total)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=config.PORT)
