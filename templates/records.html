@@ -1,1001 +1,414 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>服务器巡检系统 - 巡检记录列表</title>
-    <link rel="stylesheet" href="/static/css/tech-effects.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            position: relative;
-            overflow-x: hidden;
-            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
-        }
-        /* 禁用原有背景动画 */
-        .bg-animation,
-        .bg-glow-1,
-        .bg-glow-2,
-        .bg-glow-3,
-        .snow-container,
-        .wind-gust {
-            display: none !important;
-        }
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            z-index: -4;
-            animation: gradient-shift 15s ease infinite;
-        }
-        @keyframes gradient-shift {
-            0% {
-                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            }
-            33% {
-                background: linear-gradient(135deg, #1a1a2e 0%, #4a4a8a 50%, #16213e 100%);
-            }
-            66% {
-                background: linear-gradient(135deg, #0d0d1a 0%, #5a4a9a 50%, #1f1f3a 100%);
-            }
-            100% {
-                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            }
-        }
-        .bg-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -3;
-            background-image: 
-                linear-gradient(rgba(102, 126, 234, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(102, 126, 234, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: grid-move 20s linear infinite;
-        }
-        @keyframes grid-move {
-            0% {
-                transform: translate(0, 0);
-            }
-            100% {
-                transform: translate(50px, 50px);
-            }
-        }
-        .bg-glow-1, .bg-glow-2, .bg-glow-3 {
-            position: fixed;
-            border-radius: 50%;
-            opacity: 0.4;
-            filter: blur(80px);
-            z-index: -3;
-            animation: glow-float 20s ease-in-out infinite;
-        }
-        .bg-glow-1 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, #667eea 0%, transparent 70%);
-            top: -150px;
-            right: -150px;
-            animation-delay: 0s;
-        }
-        .bg-glow-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, #764ba2 0%, transparent 70%);
-            bottom: -100px;
-            left: -100px;
-            animation-delay: 7s;
-        }
-        .bg-glow-3 {
-            width: 350px;
-            height: 350px;
-            background: radial-gradient(circle, #f093fb 0%, transparent 70%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation-delay: 14s;
-        }
-        @keyframes glow-float {
-            0%, 100% {
-                transform: translate(0, 0) scale(1);
-                opacity: 0.3;
-            }
-            25% {
-                transform: translate(50px, -30px) scale(1.1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: translate(30px, 50px) scale(0.9);
-                opacity: 0.4;
-            }
-            75% {
-                transform: translate(-30px, 30px) scale(1.05);
-                opacity: 0.45;
-            }
-        }
-        .snow-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -2;
-            overflow: hidden;
-            pointer-events: none;
-        }
-        .snowflake {
-            position: absolute;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
-            border-radius: 50%;
-            animation: snowfall linear infinite;
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 0 12px rgba(255, 255, 255, 0.3);
-        }
-        .snowflake.small {
-            width: 3px;
-            height: 3px;
-        }
-        .snowflake.medium {
-            width: 5px;
-            height: 5px;
-        }
-        .snowflake.large {
-            width: 8px;
-            height: 8px;
-        }
-        .snowflake.xlarge {
-            width: 12px;
-            height: 12px;
-        }
-        @keyframes snowfall {
-            0% {
-                transform: translateY(-20px) translateX(0) rotate(0deg) scale(0);
-                opacity: 0;
-            }
-            5% {
-                opacity: 1;
-                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
-            }
-            25% {
-                transform: translateY(25vh) translateX(var(--sway1, 20px)) rotate(180deg) scale(1);
-            }
-            50% {
-                transform: translateY(50vh) translateX(var(--sway2, -15px)) rotate(360deg) scale(0.9);
-            }
-            75% {
-                transform: translateY(75vh) translateX(var(--sway3, 25px)) rotate(540deg) scale(1);
-            }
-            100% {
-                transform: translateY(105vh) translateX(var(--sway4, -10px)) rotate(720deg) scale(0.8);
-                opacity: 0.3;
-            }
-        }
-        .wind-gust {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
-            animation: wind-blow 8s ease-in-out infinite;
-            opacity: 0;
-        }
-        @keyframes wind-blow {
-            0%, 100% {
-                transform: translateX(-100%);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.5;
-            }
-            50% {
-                transform: translateX(100%);
-                opacity: 0.3;
-            }
-            60% {
-                opacity: 0;
-            }
-        }
-        .sidebar {
-            width: 280px;
-            background: rgba(26, 26, 46, 0.95);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px 0;
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-        }
-        .logo {
-            padding: 0 20px;
-            margin-bottom: 30px;
-        }
-        .logo h1 {
-            font-size: 18px;
-            color: #fff;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logo h1 svg {
-            width: 24px;
-            height: 24px;
-        }
-        .menu {
-            list-style: none;
-        }
-        .menu li {
-            margin-bottom: 4px;
-        }
-        .menu li a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 20px;
-            color: #a0aec0;
-            text-decoration: none;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-        }
-        .menu li a:hover {
-            background: rgba(102, 126, 234, 0.2);
-            color: #fff;
-            border-left-color: #667eea;
-        }
-        .menu li a.active {
-            background: rgba(102, 126, 234, 0.3);
-            color: #fff;
-            border-left-color: #667eea;
-        }
-        .menu li a svg {
-            width: 18px;
-            height: 18px;
-        }
-        .menu li.has-submenu {
-            position: relative;
-        }
-        .menu li.has-submenu .submenu-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .menu li.has-submenu .submenu-icon {
-            font-size: 10px;
-            transition: transform 0.3s ease;
-        }
-        .menu li.has-submenu.active .submenu-icon {
-            transform: rotate(180deg);
-        }
-        .menu li.has-submenu .submenu {
-            position: absolute;
-            left: 0;
-            top: 100%;
-            width: 100%;
-            background: rgba(26, 26, 46, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 0 6px 6px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            display: none;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-        .menu li.has-submenu:hover .submenu {
-            display: block;
-        }
-        .menu li.has-submenu .submenu li a {
-            padding: 12px 16px;
-            border-left: none;
-            border-radius: 0;
-        }
-        .menu li.has-submenu .submenu li a:hover {
-            background: rgba(102, 126, 234, 0.2);
-            border-left: none;
-        }
-        .sidebar-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(26, 26, 46, 0.95);
-        }
-        .sidebar-footer .current-time {
-            padding: 10px 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 13px;
-            font-family: 'Courier New', monospace;
-            text-align: center;
-            margin-bottom: 12px;
-        }
-        .sidebar-footer .logout-btn {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 6px;
-            color: #ef4444;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .sidebar-footer .logout-btn:hover {
-            background: rgba(239, 68, 68, 0.25);
-            border-color: rgba(239, 68, 68, 0.5);
-        }
-        .sidebar-footer .logout-btn svg {
-            width: 16px;
-            height: 16px;
-        }
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 24px;
-            position: relative;
-            z-index: 5;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .header-left h2 {
-            color: #fff;
-            font-size: 20px;
-            font-weight: 600;
-        }
-        .header-right {
-            color: #a0aec0;
-            font-size: 14px;
-        }
-        .search-bar {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-            display: flex;
-            gap: 16px;
-            align-items: center;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .search-bar select,
-        .search-bar input {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            padding: 10px 14px;
-            color: #fff;
-            font-size: 14px;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0aec0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11l-4-4h8l-4 4z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 12px;
-        }
-        .search-bar select:focus,
-        .search-bar input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        /* 下拉菜单样式 */
-        .search-bar select option {
-            background: rgba(26, 26, 46, 0.95);
-            color: #fff;
-            padding: 10px;
-        }
-        .search-bar input::placeholder {
-            color: #a0aec0;
-        }
-        .search-bar button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .btn-search {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-        .btn-search:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .btn-reset {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-        .btn-reset:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .table-container {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            overflow: hidden;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .data-table th {
-            background: rgba(102, 126, 234, 0.2);
-            padding: 14px 16px;
-            text-align: left;
-            color: #fff;
-            font-size: 13px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        .data-table th:nth-child(3) {
-            width: 40%;
-        }
-        .data-table td {
-            padding: 14px 16px;
-            color: #a0aec0;
-            font-size: 14px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            white-space: nowrap;
-        }
-        .data-table td:nth-child(3) {
-            max-width: 400px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .data-table tbody tr:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-        .result-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-        .result-badge.normal {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-        }
-        .result-badge.alert {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-        }
-        .action-btns {
-            display: flex;
-            gap: 8px;
-        }
-        .action-btn {
-            padding: 6px 12px;
-            border: none;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .btn-download {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-        }
-        .btn-download:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        .btn-delete {
-            background: #ef4444;
-            color: #fff;
-        }
-        .btn-view {
-            background: #3b82f6;
-            color: #fff;
-        }
-        .btn-view:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-        }
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        .modal-overlay.show {
-            display: flex;
-        }
-        .modal {
-            background: rgba(26, 26, 46, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            width: 90%;
-            max-width: 800px;
-            max-height: 80vh;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .modal-header h3 {
-            color: #fff;
-            font-size: 18px;
-            margin: 0;
-        }
-        .modal-close {
-            background: none;
-            border: none;
-            color: #a0aec0;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 0;
-            line-height: 1;
-        }
-        .modal-body {
-            padding: 24px;
-            max-height: calc(80vh - 120px);
-            overflow-y: auto;
-        }
-        .detail-item {
-            margin-bottom: 16px;
-        }
-        .detail-item label {
-            display: block;
-            color: #a0aec0;
-            font-size: 13px;
-            margin-bottom: 4px;
-        }
-        .detail-item value {
-            display: block;
-            color: #fff;
-            font-size: 14px;
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 6px;
-            word-break: break-all;
-        }
-        .btn-delete:hover {
-            background: #dc2626;
-        }
-        .pagination {
-            padding: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .pagination-info {
-            color: #a0aec0;
-            font-size: 13px;
-        }
-        .pagination-links {
-            display: flex;
-            gap: 4px;
-        }
-        .pagination-links a {
-            padding: 6px 12px;
-            border-radius: 4px;
-            color: #a0aec0;
-            text-decoration: none;
-            font-size: 13px;
-            transition: all 0.3s ease;
-        }
-        .pagination-links a:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .pagination-links a.active {
-            background: #667eea;
-            color: #fff;
-        }
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #a0aec0;
-        }
-        .empty-state h3 {
-            font-size: 18px;
-            margin-bottom: 10px;
-            color: #fff;
-        }
-        .empty-state a {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-        }
-    </style>
-</head>
-<body>
-    <!-- 粒子背景容器 -->
-    <div id="particles-js"></div>
-    <div class="bg-animation"></div>
-    <div class="bg-grid"></div>
-    <div class="snow-container" id="snowContainer"></div>
-    <div class="wind-gust"></div>
+{% extends 'base.html' %}
+
+{% block title %}服务器巡检系统 - 巡检记录列表{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* 统一筛选栏按钮和输入框高度 */
+    .search-bar .btn {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        height: 38px;
+        align-self: flex-end;
+    }
     
-    {% include 'sidebar.html' %}
+    /* 巡检记录表格列宽度设置 */
+    .records-table th:nth-child(1),
+    .records-table td:nth-child(1) {
+        width: 80px;
+        min-width: 80px;
+        max-width: 120px;
+    }
+    .records-table th:nth-child(2),
+    .records-table td:nth-child(2) {
+        width: 120px;
+        min-width: 120px;
+        max-width: 180px;
+    }
+    .records-table th:nth-child(3),
+    .records-table td:nth-child(3) {
+        width: auto;
+        min-width: 200px;
+    }
+    .records-table th:nth-child(4),
+    .records-table td:nth-child(4) {
+        width: 140px;
+        min-width: 140px;
+        max-width: 160px;
+    }
+    .records-table th:nth-child(5),
+    .records-table td:nth-child(5) {
+        width: 200px;
+        min-width: 200px;
+        max-width: 220px;
+    }
     
-    <div class="main-content">
-        <div class="header">
-            <div class="header-left">
-                <h2>📋 巡检记录列表</h2>
-            </div>
+    .result-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    .result-badge.normal {
+        background: rgba(40, 167, 69, 0.2);
+        color: #28a745;
+    }
+    .result-badge.alert {
+        background: rgba(220, 53, 69, 0.2);
+        color: #dc3545;
+    }
+    .action-btns {
+        display: flex;
+        gap: 8px;
+    }
+    .action-btn {
+        padding: 6px 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-view {
+        background: #10b981;
+        color: #fff;
+    }
+    .btn-view:hover {
+        background: #059669;
+    }
+    .btn-download {
+        background: #f59e0b;
+        color: #fff;
+    }
+    .btn-download:hover {
+        background: #d97706;
+    }
+    .btn-delete {
+        background: #dc3545;
+        color: #fff;
+    }
+    .btn-delete:hover {
+        background: #c82333;
+    }
+    .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-overlay.show {
+        display: flex;
+    }
+    .modal {
+        background: rgba(26, 26, 46, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow: hidden;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 24px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .modal-header h3 {
+        color: #fff;
+        font-size: 18px;
+        margin: 0;
+    }
+    .modal-close {
+        background: none;
+        border: none;
+        color: #a0aec0;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+    .modal-body {
+        padding: 24px;
+        max-height: calc(80vh - 120px);
+        overflow-y: auto;
+    }
+    .detail-item {
+        margin-bottom: 16px;
+    }
+    .detail-item label {
+        display: block;
+        color: #a0aec0;
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+    .detail-item value {
+        display: block;
+        color: #fff;
+        font-size: 14px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 6px;
+        word-break: break-all;
+    }
+    .btn-delete:hover {
+        background: #dc2626;
+    }
+    .pagination {
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .pagination-info {
+        color: #a0aec0;
+        font-size: 13px;
+    }
+    .pagination-links {
+        display: flex;
+        gap: 4px;
+    }
+    .pagination-links a {
+        padding: 6px 12px;
+        border-radius: 4px;
+        color: #a0aec0;
+        text-decoration: none;
+        font-size: 13px;
+        transition: all 0.3s ease;
+    }
+    .pagination-links a:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .pagination-links a.active {
+        background: #667eea;
+        color: #fff;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #a0aec0;
+    }
+    .empty-state h3 {
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #fff;
+    }
+    .empty-state a {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border-radius: 6px;
+        text-decoration: none;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="header">
+        <div class="header-left">
+            <h2>📋 巡检记录列表</h2>
         </div>
-        
-        <div class="search-bar">
+        <div class="header-right"></div>
+    </div>
+    
+    <div class="search-bar">
+        <div class="form-group">
+            <label>分组</label>
             <select name="group_id" id="group_filter">
                 <option value="all">全部分组</option>
                 {% for group in groups %}
                 <option value="{{ group[0] }}" {{ 'selected' if selected_group == group[0]|string else '' }}>{{ group[1] }}</option>
                 {% endfor %}
             </select>
-            <input type="text" id="ip_search" placeholder="IP" value="{{ search_ip }}">
-            <button class="btn-search" onclick="search()">搜索</button>
-            <button class="btn-reset" onclick="resetSearch()">重置</button>
         </div>
-        
-        <div class="table-container">
-            {% if records %}
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>分组</th>
-                        <th>服务名称</th>
-                        <th>巡检结果</th>
-                        <th>巡检时间</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in records %}
-                    <tr>
-                        <td>{{ record[14] or '默认分组' }}</td>
-                        <td>{{ record[12] or '未知服务器' }}</td>
-                        <td>
-                            {% set result = record[10] or '未记录' %}
-                            <span class="result-badge {{ 'alert' if '⚠️' in result else 'normal' }}">
-                                {{ result }}
-                            </span>
-                        </td>
-                        <td>{{ record[7] }}</td>
-                        <td>
-                            <div class="action-btns">
-                                <button class="action-btn btn-view" onclick="viewRecord({{ record[0] }})">查看</button>
-                                <a href="/download_report/{{ record[0] }}" class="action-btn btn-download">下载</a>
-                                <button class="action-btn btn-delete" onclick="deleteRecord({{ record[0] }})">删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="pagination">
-                <div class="pagination-info">共 {{ total }} 条记录</div>
-                <div class="pagination-links">
-                    {% if page > 1 %}
-                    <a href="/records?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ page-1 }}">上一页</a>
-                    {% endif %}
-                    {% for p in range(1, total_pages+1) %}
-                    <a href="/records?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ p }}" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
-                    {% endfor %}
-                    {% if page < total_pages %}
-                    <a href="/records?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ page+1 }}">下一页</a>
-                    {% endif %}
-                </div>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <h3>暂无巡检记录</h3>
-                <p>前往服务器列表执行巡检</p>
-                <a href="/">立即巡检</a>
-            </div>
-            {% endif %}
+        <div class="form-group">
+            <label>搜索内容</label>
+            <input type="text" id="ip_search" placeholder="IP、名称" value="{{ search_ip }}">
         </div>
+        <button onclick="search()">搜索</button>
     </div>
     
-    <!-- 详情模态框 -->
-    <div class="modal-overlay" id="recordModal">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>📋 巡检详情</h3>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
-            </div>
-            <div class="modal-body" id="modalContent">
+    <div class="table-container">
+        {% if records %}
+        <table class="data-table records-table">
+            <thead>
+                <tr>
+                    <th>分组</th>
+                    <th>服务名称</th>
+                    <th>巡检结果</th>
+                    <th>巡检时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record[14] or '默认分组' }}</td>
+                    <td>{{ record[12] or '未知服务器' }}</td>
+                    <td>
+                        {% set result = record[10] or '未记录' %}
+                        <span class="result-badge {{ 'alert' if '⚠️' in result else 'normal' }}">
+                            {{ result }}
+                        </span>
+                    </td>
+                    <td>{{ record[7] }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-btn btn-view" onclick="viewRecord({{ record[0] }})">查看</button>
+                            <a href="/download_report/{{ record[0] }}" class="action-btn btn-download">下载</a>
+                            <button class="action-btn btn-delete" onclick="deleteRecord({{ record[0] }})">删除</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="pagination">
+            <div class="pagination-info">共 {{ total }} 条记录</div>
+            <div class="pagination-links">
+                {% if page > 1 %}
+                <a href="javascript:void(0)" onclick="loadPage('/records?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ page-1 }}')">上一页</a>
+                {% endif %}
+                {% for p in range(1, total_pages+1) %}
+                <a href="javascript:void(0)" onclick="loadPage('/records?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ p }}')" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
+                {% endfor %}
+                {% if page < total_pages %}
+                <a href="javascript:void(0)" onclick="loadPage('/records?group_id={{ selected_group }}&ip={{ search_ip }}&page={{ page+1 }}')">下一页</a>
+                {% endif %}
             </div>
         </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>暂无巡检记录</h3>
+            <p>前往服务器列表执行巡检</p>
+            <a href="javascript:void(0)" onclick="loadPage('/')">立即巡检</a>
+        </div>
+        {% endif %}
     </div>
-    
-    <script>
-        function createSnowflakes() {
-            const container = document.getElementById('snowContainer');
-            const sizes = ['small', 'medium', 'large', 'xlarge'];
-            const flakeCount = 80;
-            
-            for (let i = 0; i < flakeCount; i++) {
-                const snowflake = document.createElement('div');
-                const size = sizes[Math.floor(Math.random() * sizes.length)];
-                snowflake.className = `snowflake ${size}`;
-                
-                snowflake.style.left = Math.random() * 100 + '%';
-                snowflake.style.top = Math.random() * 20 - 20 + '%';
-                
-                const duration = 8 + Math.random() * 12;
-                snowflake.style.animationDuration = duration + 's';
-                snowflake.style.animationDelay = Math.random() * 10 + 's';
-                
-                const swayAmount = 30 + Math.random() * 40;
-                snowflake.style.setProperty('--sway1', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                snowflake.style.setProperty('--sway2', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                snowflake.style.setProperty('--sway3', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                snowflake.style.setProperty('--sway4', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                
-                container.appendChild(snowflake);
-            }
-        }
-        createSnowflakes();
-        
-        function updateTime() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            
-            const timeStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            document.getElementById('currentTime').textContent = timeStr;
-        }
-        updateTime();
-        setInterval(updateTime, 1000);
-        
-        function animateSidebarItems() {
-            const menuItems = document.querySelectorAll('.menu li');
-            menuItems.forEach((item, index) => {
-                item.style.opacity = '0';
-                item.style.transform = 'translateX(-20px)';
-                item.style.transition = 'all 0.4s ease';
-                setTimeout(() => {
-                    item.style.opacity = '1';
-                    item.style.transform = 'translateX(0)';
-                }, index * 100 + 200);
-            });
-        }
-        animateSidebarItems();
-        
-        function animateButtons() {
-            const buttons = document.querySelectorAll('button');
-            buttons.forEach((btn) => {
-                btn.style.position = 'relative';
-                btn.style.overflow = 'hidden';
-                btn.addEventListener('click', function(e) {
-                    const ripple = document.createElement('span');
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.clientX - rect.left - size / 2;
-                    const y = e.clientY - rect.top - size / 2;
-                    ripple.style.width = ripple.style.height = size + 'px';
-                    ripple.style.left = x + 'px';
-                    ripple.style.top = y + 'px';
-                    ripple.style.position = 'absolute';
-                    ripple.style.borderRadius = '50%';
-                    ripple.style.background = 'rgba(255, 255, 255, 0.3)';
-                    ripple.style.transform = 'scale(0)';
-                    ripple.style.animation = 'ripple 0.6s ease-out';
-                    this.appendChild(ripple);
-                    setTimeout(() => ripple.remove(), 600);
-                });
-            });
-        }
-        animateButtons();
-        
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = `
-            @keyframes ripple {
-                to {
-                    transform: scale(2);
-                    opacity: 0;
-                }
-            }
-            .menu li a:hover {
-                transform: translateX(5px);
-                box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
-            }
-            button {
-                transition: all 0.3s ease;
-            }
-            button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-            }
-            button:active {
-                transform: translateY(0);
-            }
-            .action-btns a {
-                transition: all 0.3s ease;
-            }
-            .action-btns a:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            }
-            /* 分页样式 */
-            .pagination {
-                padding: 16px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-top: 1px solid rgba(255, 255, 255, 0.05);
-            }
-            .pagination-info {
-                color: #a0aec0;
-                font-size: 13px;
-            }
-            .pagination-links {
-                display: flex;
-                gap: 4px;
-            }
-            .pagination-links a {
-                padding: 6px 12px;
-                border-radius: 4px;
-                color: #a0aec0;
-                text-decoration: none;
-                font-size: 13px;
-                transition: all 0.3s ease;
-            }
-            .pagination-links a:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-            .pagination-links a.active {
-                background: #667eea;
-                color: #fff;
-            }
-        `;
-        document.head.appendChild(styleSheet);
 
-        function search() {
-            const groupId = document.getElementById('group_filter').value;
-            const ip = document.getElementById('ip_search').value;
-            let url = '/records?';
-            if (groupId !== 'all') {
-                url += `group_id=${groupId}`;
-            }
-            if (ip) {
-                url += url.includes('?') ? '&' : '?';
-                url += `ip=${encodeURIComponent(ip)}`;
-            }
-            location.href = url;
-        }
-        
-        function resetSearch() {
-            document.getElementById('group_filter').value = 'all';
-            document.getElementById('ip_search').value = '';
-            location.href = '/records';
-        }
-        
-        function deleteRecord(recordId) {
-            if (confirm('确定删除该记录？')) {
-                location.href = '/delete_record/' + recordId;
-            }
-        }
-        
-        function viewRecord(recordId) {
-            fetch('/api/get_record_detail/' + recordId)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const record = data.record;
-                        let content = `
-                            <div class="detail-item">
-                                <label>服务器名称</label>
-                                <value>${record.server_name || '未知'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>服务器IP</label>
-                                <value>${record.server_ip || '未知'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>分组</label>
-                                <value>${record.group_name || '默认分组'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>CPU使用率</label>
-                                <value>${record.cpu_usage || '未记录'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>内存使用</label>
-                                <value>${record.memory_usage || '未记录'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>磁盘使用</label>
-                                <value>${record.disk_usage || '未记录'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>系统时间</label>
-                                <value>${record.system_time || '未记录'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>操作系统版本</label>
-                                <value>${record.os_version || '未记录'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>告警内容</label>
-                                <value>${record.alert_content || '无告警'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>巡检结果</label>
-                                <value>${record.inspection_result || '未记录'}</value>
-                            </div>
-                            <div class="detail-item">
-                                <label>巡检时间</label>
-                                <value>${record.inspection_time || '未记录'}</value>
-                            </div>
-                        `;
-                        document.getElementById('modalContent').innerHTML = content;
-                        document.getElementById('recordModal').classList.add('show');
-                    } else {
-                        alert('获取详情失败');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('获取详情失败');
-                });
-        }
-        
-        function closeModal() {
-            document.getElementById('recordModal').classList.remove('show');
-        }
-        
-        document.getElementById('recordModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeModal();
+<!-- 详情模态框 -->
+<div class="modal-overlay" id="recordModal">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>📋 巡检详情</h3>
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalContent">
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+function search() {
+    const groupFilter = document.getElementById('group_filter').value;
+    const ipSearch = document.getElementById('ip_search').value;
+    const url = `/records?group_id=${groupFilter}&ip=${encodeURIComponent(ipSearch)}`;
+    loadPage(url);
+}
+
+function resetSearch() {
+    document.getElementById('group_filter').value = 'all';
+    document.getElementById('ip_search').value = '';
+    loadPage('/records');
+}
+
+function viewRecord(recordId) {
+    fetch(`/api/get_record_detail/${recordId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const record = data.record;
+                let html = `
+                    <div class="detail-item">
+                        <label>服务器名称</label>
+                        <value>${record.server_name || '未知'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>IP地址</label>
+                        <value>${record.server_ip || '未知'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>分组</label>
+                        <value>${record.group_name || '默认分组'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>巡检时间</label>
+                        <value>${record.inspection_time || '未知'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>巡检结果</label>
+                        <value><span class="result-badge ${record.inspection_result && record.inspection_result.includes('⚠️') ? 'alert' : 'normal'}">${record.inspection_result || '未记录'}</span></value>
+                    </div>
+                    <div class="detail-item">
+                        <label>CPU使用率</label>
+                        <value>${record.cpu_usage || '-'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>内存使用率</label>
+                        <value>${record.memory_usage || '-'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>磁盘使用率</label>
+                        <value>${record.disk_usage || '-'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>系统时间</label>
+                        <value>${record.system_time || '-'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>操作系统版本</label>
+                        <value>${record.os_version || '-'}</value>
+                    </div>
+                    <div class="detail-item">
+                        <label>告警内容</label>
+                        <value>${record.alert_content || '-'}</value>
+                    </div>
+                `;
+                document.getElementById('modalContent').innerHTML = html;
+                document.getElementById('recordModal').classList.add('show');
             }
         });
-    </script>
-    
-    <!-- 科技风特效JS -->
-    <script src="/static/js/tech-effects.js"></script>
-</body>
-</html>
+}
+
+function closeModal() {
+    document.getElementById('recordModal').classList.remove('show');
+}
+
+function deleteRecord(recordId) {
+    if (confirm('确定要删除这条巡检记录吗？')) {
+        fetch(`/api/delete_record/${recordId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadPage('/records');
+            } else {
+                alert('删除失败');
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

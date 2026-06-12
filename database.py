@@ -354,13 +354,45 @@ def add_group(name, sort_order=0, parent_id=None):
         conn.close()
         return None
 
-def get_all_groups():
+def get_all_groups(name=None, page=1, per_page=10):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT id, name, sort_order, parent_id FROM groups WHERE is_deleted = 0 ORDER BY sort_order ASC, created_at DESC')
+    
+    offset = (page - 1) * per_page
+    
+    if name:
+        if DATABASE_TYPE != 'sqlite':
+            query = 'SELECT id, name, sort_order, (SELECT COUNT(*) FROM servers WHERE group_id = groups.id AND is_deleted = 0) as server_count FROM groups WHERE is_deleted = 0 AND name LIKE %s ORDER BY sort_order ASC, created_at DESC LIMIT %s OFFSET %s'
+            cursor.execute(query, ('%' + name + '%', per_page, offset))
+        else:
+            query = 'SELECT id, name, sort_order, (SELECT COUNT(*) FROM servers WHERE group_id = groups.id AND is_deleted = 0) as server_count FROM groups WHERE is_deleted = 0 AND name LIKE ? ORDER BY sort_order ASC, created_at DESC LIMIT ? OFFSET ?'
+            cursor.execute(query, ('%' + name + '%', per_page, offset))
+    else:
+        if DATABASE_TYPE != 'sqlite':
+            query = 'SELECT id, name, sort_order, (SELECT COUNT(*) FROM servers WHERE group_id = groups.id AND is_deleted = 0) as server_count FROM groups WHERE is_deleted = 0 ORDER BY sort_order ASC, created_at DESC LIMIT %s OFFSET %s'
+            cursor.execute(query, (per_page, offset))
+        else:
+            query = 'SELECT id, name, sort_order, (SELECT COUNT(*) FROM servers WHERE group_id = groups.id AND is_deleted = 0) as server_count FROM groups WHERE is_deleted = 0 ORDER BY sort_order ASC, created_at DESC LIMIT ? OFFSET ?'
+            cursor.execute(query, (per_page, offset))
+    
     groups = cursor.fetchall()
+    
     conn.close()
     return groups
+
+def get_groups_count(name=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    if name:
+        query = 'SELECT COUNT(*) FROM groups WHERE is_deleted = 0 AND name LIKE %s' if DATABASE_TYPE != 'sqlite' else 'SELECT COUNT(*) FROM groups WHERE is_deleted = 0 AND name LIKE ?'
+        cursor.execute(query, ('%' + name + '%',))
+    else:
+        cursor.execute('SELECT COUNT(*) FROM groups WHERE is_deleted = 0')
+    
+    count = cursor.fetchone()[0]
+    conn.close()
+    return count
 
 def get_group_by_id(group_id):
     conn = get_connection()

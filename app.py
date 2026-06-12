@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, send_file, make_response, session
 from flask_cors import CORS
-from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item, get_inspection_items_count, get_user_by_username, update_user_password, add_upload_record, get_upload_record_by_id, get_all_upload_records, get_upload_records_count, delete_upload_record, get_upload_records_by_file_path, add_fault, get_all_faults, get_faults_count, get_fault_by_id, update_fault, delete_fault, review_fault, get_alert_config, save_alert_config, add_alert_log, get_alert_logs, get_alert_logs_count
+from database import add_server, get_all_servers, get_server_by_id, update_server, delete_server, add_inspection_record, get_inspection_records, get_inspection_record_by_id, get_all_groups, add_group, delete_group, update_group, search_servers, add_scheduled_task, get_scheduled_task_by_server_id, get_all_scheduled_tasks, update_scheduled_task, delete_scheduled_task, add_report, get_all_reports, delete_report, update_group_sort_order, get_servers_count, get_inspection_records_count, get_scheduled_tasks_count, get_reports_count, add_inspection_item, get_all_inspection_items, get_inspection_item_by_id, update_inspection_item, delete_inspection_item, toggle_inspection_item, get_inspection_items_count, get_user_by_username, update_user_password, add_upload_record, get_upload_record_by_id, get_all_upload_records, get_upload_records_count, delete_upload_record, get_upload_records_by_file_path, add_fault, get_all_faults, get_faults_count, get_fault_by_id, update_fault, delete_fault, review_fault, get_alert_config, save_alert_config, add_alert_log, get_alert_logs, get_alert_logs_count, get_groups_count
 from encryption import decrypt_password
 from inspection import ServerInspector
 from windows_inspection import WindowsServerInspector
@@ -617,8 +617,15 @@ def api_search_groups():
 @app.route('/groups')
 @login_required
 def groups():
-    groups = get_all_groups()
-    return render_template('groups.html', groups=groups)
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    name = request.args.get('name', '').strip()
+    
+    groups = get_all_groups(name=name, page=page, per_page=per_page)
+    total = get_groups_count(name=name)
+    total_pages = (total + per_page - 1) // per_page
+    
+    return render_template('groups.html', groups=groups, search_name=name, page=page, per_page=per_page, total=total, total_pages=total_pages)
 
 @app.route('/tasks')
 @login_required

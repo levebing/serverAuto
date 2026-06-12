@@ -91,10 +91,18 @@
             background: rgba(255, 255, 255, 0.05);
             border-radius: 10px;
             padding: 30px;
-            max-width: 500px;
+            max-width: 800px;
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
         }
         .form-group {
             margin-bottom: 20px;
+            flex: 1;
+        }
+        .form-group.full-width {
+            flex: 1 1 100%;
         }
         .form-group label {
             display: block;
@@ -213,47 +221,55 @@
         
         <div class="form-card">
             <form method="POST" enctype="multipart/form-data">
-                <div class="form-group">
-                    <label>服务名称 *</label>
-                    <input type="text" name="name" required placeholder="请输入服务名称">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>服务名称 *</label>
+                        <input type="text" name="name" required placeholder="请输入服务名称">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>分组</label>
+                        <select name="group_id">
+                            <option value="">请选择分组</option>
+                            {% for group in groups %}
+                            <option value="{{ group[0] }}">{{ group[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>分组</label>
-                    <select name="group_id">
-                        <option value="">请选择分组</option>
-                        {% for group in groups %}
-                        <option value="{{ group[0] }}">{{ group[1] }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>IP地址 *</label>
+                        <input type="text" name="ip" required placeholder="请输入IP地址">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>端口</label>
+                        <input type="number" name="port" value="22">
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>IP地址 *</label>
-                    <input type="text" name="ip" required placeholder="请输入IP地址">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>操作系统类型</label>
+                        <select name="os_type" id="os_type">
+                            <option value="linux">Linux</option>
+                            <option value="windows">Windows</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>登录用户名</label>
+                        <input type="text" name="username" placeholder="请输入用户名">
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>端口</label>
-                    <input type="number" name="port" value="22">
-                </div>
-                
-                <div class="form-group">
-                    <label>操作系统类型</label>
-                    <select name="os_type" id="os_type">
-                        <option value="linux">Linux</option>
-                        <option value="windows">Windows</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>登录用户名</label>
-                    <input type="text" name="username" placeholder="请输入用户名">
-                </div>
-                
-                <div class="form-group">
-                    <label>登录密码</label>
-                    <input type="password" name="password" placeholder="请输入密码">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>登录密码</label>
+                        <input type="password" name="password" placeholder="请输入密码">
+                    </div>
                 </div>
                 
                 <div class="form-group">

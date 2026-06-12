@@ -1,1070 +1,337 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>服务器巡检系统 - 巡检报告</title>
-    <link rel="stylesheet" href="/static/css/tech-effects.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            min-height: 100vh;
-            display: flex;
-            position: relative;
-            overflow-x: hidden;
-            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
-        }
-        /* 禁用原有背景动画 */
-        .bg-animation,
-        .bg-glow-1,
-        .bg-glow-2,
-        .bg-glow-3,
-        .snow-container,
-        .wind-gust {
-            display: none !important;
-        }
-        .bg-animation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            z-index: -4;
-            animation: gradient-shift 15s ease infinite;
-        }
-        @keyframes gradient-shift {
-            0% {
-                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            }
-            33% {
-                background: linear-gradient(135deg, #1a1a2e 0%, #4a4a8a 50%, #16213e 100%);
-            }
-            66% {
-                background: linear-gradient(135deg, #0d0d1a 0%, #5a4a9a 50%, #1f1f3a 100%);
-            }
-            100% {
-                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
-            }
-        }
-        .bg-grid {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -3;
-            background-image: 
-                linear-gradient(rgba(102, 126, 234, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(102, 126, 234, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            animation: grid-move 20s linear infinite;
-        }
-        @keyframes grid-move {
-            0% {
-                transform: translate(0, 0);
-            }
-            100% {
-                transform: translate(50px, 50px);
-            }
-        }
-        .bg-glow-1, .bg-glow-2, .bg-glow-3 {
-            position: fixed;
-            border-radius: 50%;
-            opacity: 0.4;
-            filter: blur(80px);
-            z-index: -3;
-            animation: glow-float 20s ease-in-out infinite;
-        }
-        .bg-glow-1 {
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, #667eea 0%, transparent 70%);
-            top: -150px;
-            right: -150px;
-            animation-delay: 0s;
-        }
-        .bg-glow-2 {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, #764ba2 0%, transparent 70%);
-            bottom: -100px;
-            left: -100px;
-            animation-delay: 7s;
-        }
-        .bg-glow-3 {
-            width: 350px;
-            height: 350px;
-            background: radial-gradient(circle, #f093fb 0%, transparent 70%);
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            animation-delay: 14s;
-        }
-        @keyframes glow-float {
-            0%, 100% {
-                transform: translate(0, 0) scale(1);
-                opacity: 0.3;
-            }
-            25% {
-                transform: translate(50px, -30px) scale(1.1);
-                opacity: 0.5;
-            }
-            50% {
-                transform: translate(30px, 50px) scale(0.9);
-                opacity: 0.4;
-            }
-            75% {
-                transform: translate(-30px, 30px) scale(1.05);
-                opacity: 0.45;
-            }
-        }
-        .snow-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -2;
-            overflow: hidden;
-            pointer-events: none;
-        }
-        .snowflake {
-            position: absolute;
-            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
-            border-radius: 50%;
-            animation: snowfall linear infinite;
-            box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 0 12px rgba(255, 255, 255, 0.3);
-        }
-        .snowflake.small {
-            width: 3px;
-            height: 3px;
-        }
-        .snowflake.medium {
-            width: 5px;
-            height: 5px;
-        }
-        .snowflake.large {
-            width: 8px;
-            height: 8px;
-        }
-        .snowflake.xlarge {
-            width: 12px;
-            height: 12px;
-        }
-        @keyframes snowfall {
-            0% {
-                transform: translateY(-20px) translateX(0) rotate(0deg) scale(0);
-                opacity: 0;
-            }
-            5% {
-                opacity: 1;
-                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
-            }
-            25% {
-                transform: translateY(25vh) translateX(var(--sway1, 20px)) rotate(180deg) scale(1);
-            }
-            50% {
-                transform: translateY(50vh) translateX(var(--sway2, -15px)) rotate(360deg) scale(0.9);
-            }
-            75% {
-                transform: translateY(75vh) translateX(var(--sway3, 25px)) rotate(540deg) scale(1);
-            }
-            100% {
-                transform: translateY(105vh) translateX(var(--sway4, -10px)) rotate(720deg) scale(0.8);
-                opacity: 0.3;
-            }
-        }
-        .wind-gust {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
-            animation: wind-blow 8s ease-in-out infinite;
-            opacity: 0;
-        }
-        @keyframes wind-blow {
-            0%, 100% {
-                transform: translateX(-100%);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.5;
-            }
-            50% {
-                transform: translateX(100%);
-                opacity: 0.3;
-            }
-            60% {
-                opacity: 0;
-            }
-        }
-        .sidebar {
-            width: 280px;
-            background: rgba(26, 26, 46, 0.95);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 20px 0;
-            position: fixed;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            z-index: 10;
-            backdrop-filter: blur(10px);
-        }
-        .logo {
-            padding: 0 20px;
-            margin-bottom: 30px;
-        }
-        .logo h1 {
-            font-size: 18px;
-            color: #fff;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .logo h1 svg {
-            width: 24px;
-            height: 24px;
-        }
-        .menu {
-            list-style: none;
-        }
-        .menu li {
-            margin-bottom: 4px;
-        }
-        .menu li a {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 14px 20px;
-            color: #a0aec0;
-            text-decoration: none;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-        }
-        .menu li a:hover {
-            background: rgba(102, 126, 234, 0.2);
-            color: #fff;
-            border-left-color: #667eea;
-        }
-        .menu li a.active {
-            background: rgba(102, 126, 234, 0.3);
-            color: #fff;
-            border-left-color: #667eea;
-        }
-        .menu li a svg {
-            width: 18px;
-            height: 18px;
-        }
-        .menu li.has-submenu {
-            position: relative;
-        }
-        .menu li.has-submenu .submenu-toggle {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .menu li.has-submenu .submenu-icon {
-            font-size: 10px;
-            transition: transform 0.3s ease;
-        }
-        .menu li.has-submenu.active .submenu-icon {
-            transform: rotate(180deg);
-        }
-        .menu li.has-submenu .submenu {
-            position: absolute;
-            left: 0;
-            top: 100%;
-            width: 100%;
-            background: rgba(26, 26, 46, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 0 0 6px 6px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-            display: none;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-        .menu li.has-submenu:hover .submenu {
-            display: block;
-        }
-        .menu li.has-submenu .submenu li a {
-            padding: 12px 16px;
-            border-left: none;
-            border-radius: 0;
-        }
-        .menu li.has-submenu .submenu li a:hover {
-            background: rgba(102, 126, 234, 0.2);
-            border-left: none;
-        }
-        .sidebar-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(26, 26, 46, 0.95);
-        }
-        .sidebar-footer .current-time {
-            padding: 10px 12px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 13px;
-            font-family: 'Courier New', monospace;
-            text-align: center;
-            margin-bottom: 12px;
-        }
-        .sidebar-footer .logout-btn {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 6px;
-            color: #ef4444;
-            font-size: 14px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .sidebar-footer .logout-btn:hover {
-            background: rgba(239, 68, 68, 0.25);
-            border-color: rgba(239, 68, 68, 0.5);
-        }
-        .sidebar-footer .logout-btn svg {
-            width: 16px;
-            height: 16px;
-        }
-        .main-content {
-            flex: 1;
-            margin-left: 280px;
-            padding: 24px;
-            position: relative;
-            z-index: 5;
-        }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-        }
-        .header-left h2 {
-            color: #fff;
-            font-size: 20px;
-            font-weight: 600;
-        }
-        .header-right {
-            color: #a0aec0;
-            font-size: 14px;
-        }
-        .search-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 24px;
-        }
-        .search-bar select,
-        .search-bar input {
-            flex: 1;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            padding: 10px 14px;
-            color: #fff;
-            font-size: 14px;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0aec0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11l-4-4h8l-4 4z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 12px;
-        }
-        .search-bar select:focus,
-        .search-bar input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        /* 下拉菜单样式 */
-        .search-bar select option {
-            background: rgba(26, 26, 46, 0.95);
-            color: #fff;
-            padding: 10px;
-        }
-        .search-bar input::placeholder {
-            color: #a0aec0;
-        }
-        .search-bar button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        .btn-search {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-        .btn-search:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .btn-reset {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-        .btn-reset:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .btn-add {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-        }
-        .btn-add:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        .btn-search {
-            background: rgba(34, 197, 94, 0.8);
-            color: #fff;
-        }
-        .btn-search:hover {
-            background: rgba(34, 197, 94, 1);
-            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
-        }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.15);
-            color: #fff;
-        }
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-        }
-        .alert {
-            padding: 16px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-        .alert-success {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            border-left: 3px solid #10b981;
-        }
-        .alert-error {
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            border-left: 3px solid #ef4444;
-        }
-        .report-cards {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
-        }
-        .report-card {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 10px;
-            padding: 30px;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
-        }
-        .report-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
-        }
-        .report-card h3 {
-            color: #fff;
-            font-size: 18px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .report-card p {
-            color: #a0aec0;
-            font-size: 14px;
-            margin-bottom: 24px;
-        }
-        .report-card .btn {
-            width: 100%;
-        }
-        .progress-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(5px);
-        }
-        .progress-overlay.show {
-            display: flex;
-        }
-        .progress-container {
-            background: rgba(26, 26, 46, 0.95);
-            border-radius: 12px;
-            padding: 40px;
-            width: 400px;
-            max-width: 90%;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .progress-header {
-            text-align: center;
-            margin-bottom: 24px;
-        }
-        .progress-header h3 {
-            color: #fff;
-            font-size: 18px;
-            margin-bottom: 8px;
-        }
-        .progress-bar {
-            height: 8px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 16px;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            border-radius: 4px;
-            width: 0%;
-            transition: width 0.3s ease;
-            animation: progress-shine 2s infinite;
-        }
-        @keyframes progress-shine {
-            0% {
-                box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
-            }
-            50% {
-                box-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
-            }
-            100% {
-                box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- 粒子背景容器 -->
-    <div id="particles-js"></div>
-    <div class="bg-animation"></div>
-    <div class="bg-grid"></div>
-    <div class="snow-container" id="snowContainer"></div>
-    <div class="wind-gust"></div>
+{% extends 'base.html' %}
+
+{% block title %}服务器巡检系统 - 巡检报告{% endblock %}
+
+{% block extra_style %}
+<style>
+    /* 统一筛选栏按钮和输入框高度 */
+    .search-bar .btn {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        height: 38px;
+        align-self: flex-end;
+    }
     
-    {% include 'sidebar.html' %}
-    
-    <div class="main-content">
-        <div class="header">
-            <div class="header-left">
-                <h2>📊 巡检报告</h2>
-            </div>
+    .data-table td {
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .btn-download {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+    }
+    .btn-download:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .btn-delete {
+        background: #ef4444;
+        color: #fff;
+    }
+    .btn-delete:hover {
+        background: #dc2626;
+    }
+    .pagination {
+        padding: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .pagination-info {
+        color: #a0aec0;
+        font-size: 13px;
+    }
+    .pagination-links {
+        display: flex;
+        gap: 4px;
+    }
+    .pagination-links a {
+        padding: 6px 12px;
+        border-radius: 4px;
+        color: #a0aec0;
+        text-decoration: none;
+        font-size: 13px;
+        transition: all 0.3s ease;
+    }
+    .pagination-links a:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .pagination-links a.active {
+        background: #667eea;
+        color: #fff;
+    }
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #a0aec0;
+    }
+    .empty-state h3 {
+        font-size: 18px;
+        margin-bottom: 10px;
+        color: #fff;
+    }
+    .progress-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        backdrop-filter: blur(5px);
+    }
+    .progress-overlay.show {
+        display: flex;
+    }
+    .progress-container {
+        background: rgba(26, 26, 46, 0.95);
+        border-radius: 12px;
+        padding: 40px;
+        width: 400px;
+        max-width: 90%;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .progress-header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
+    .progress-header h3 {
+        color: #fff;
+        font-size: 18px;
+        margin-bottom: 8px;
+    }
+    .progress-bar {
+        height: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 16px;
+    }
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        border-radius: 4px;
+        width: 0%;
+        transition: width 0.3s ease;
+        animation: progress-shine 2s infinite;
+    }
+    @keyframes progress-shine {
+        0% {
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        }
+        50% {
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+        }
+        100% {
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="header">
+        <div class="header-left">
+            <h2>📊 巡检报告</h2>
         </div>
-        
-        <div class="search-bar">
+        <div class="header-right">
+            <button class="btn btn-add" onclick="generateReport()">+ 生成报告</button>
+        </div>
+    </div>
+    
+    <div class="search-bar">
+        <div class="form-group">
+            <label>报告类型</label>
             <select id="reportType">
-                <option value="">报告类型</option>
+                <option value="">全部类型</option>
                 <option value="daily" {{ 'selected' if filter_type == 'daily' else '' }}>日报</option>
                 <option value="weekly" {{ 'selected' if filter_type == 'weekly' else '' }}>周报</option>
                 <option value="monthly" {{ 'selected' if filter_type == 'monthly' else '' }}>月报</option>
             </select>
+        </div>
+        <div class="form-group">
+            <label>分组</label>
             <select id="groupId">
                 <option value="all">所有分组</option>
                 {% for group in groups %}
                 <option value="{{ group[0] }}" {{ 'selected' if filter_group == group[0]|string else '' }}>{{ group[1] }}</option>
                 {% endfor %}
             </select>
+        </div>
+        <div class="form-group">
+            <label>日期</label>
             <input type="date" id="reportDate" value="{{ filter_date }}">
-            <button class="btn-add" onclick="generateReport()">+ 生成报告</button>
-            <button class="btn-search" onclick="filterReports()">搜索</button>
-            <button class="btn-reset" onclick="resetFilter()">重置</button>
         </div>
-        
-        <div class="table-container">
-            <!-- <h3 style="color: #fff; margin: 20px 0;">报告列表</h3> -->
-            {% if reports %}
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>分组</th>
-                        <th>报告名称</th>
-                        <th>类型</th>
-                        <th>生成时间</th>
-                        <th>文件路径</th>
-                        <th>操作</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for report in reports %}
-                    <tr>
-                        <td>{{ report[3] or '所有分组' }}</td>
-                        <td>{{ report[4] }}</td>
-                        <td>
-                            {% if report[1] == 'daily' %}日报
-                            {% elif report[1] == 'weekly' %}周报
-                            {% elif report[1] == 'monthly' %}月报
-                            {% else %}{{ report[1] }}
-                            {% endif %}
-                        </td>
-                        <td>{{ report[5] }}</td>
-                        <td>{{ report[7] or '-' }}</td>
-                        <td>
-                            <div class="action-btns">
-                                {% if report[7] %}
-                                    {% if report[7].startswith('http://') or report[7].startswith('https://') %}
-                                    <a href="{{ report[7] }}" class="action-btn btn-download" download>下载</a>
-                                    {% else %}
-                                    <a href="{{ base_url }}/{{ report[7] }}" class="action-btn btn-download" download>下载</a>
-                                    {% endif %}
-                                {% else %}
-                                <button class="action-btn btn-download" onclick="downloadReport('{{ report[1] }}', '{{ report[2] or 'all' }}')">下载</button>
-                                {% endif %}
-                                <!-- {% if report[7] %}
-                                    {% if report[7].startswith('http://') or report[7].startswith('https://') %}
-                                    <a href="https://docs.google.com/viewer?url={{ report[7] }}" class="action-btn btn-download" target="_blank">在线查看</a>
-                                    {% else %}
-                                    <a href="https://docs.google.com/viewer?url={{ base_url }}/{{ report[7] }}" class="action-btn btn-download" target="_blank">在线查看</a>
-                                    {% endif %}
-                                {% endif %} -->
-                                <button class="action-btn btn-delete" onclick="deleteReport({{ report[0] }})">删除</button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <div class="pagination">
-                <div class="pagination-info">共 {{ total }} 条记录</div>
-                <div class="pagination-links">
-                    {% if page > 1 %}
-                    <a href="/reports?report_type={{ filter_type }}&group_id={{ filter_group }}&date={{ filter_date }}&page={{ page-1 }}">上一页</a>
-                    {% endif %}
-                    {% for p in range(1, total_pages+1) %}
-                    <a href="/reports?report_type={{ filter_type }}&group_id={{ filter_group }}&date={{ filter_date }}&page={{ p }}" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
-                    {% endfor %}
-                    {% if page < total_pages %}
-                    <a href="/reports?report_type={{ filter_type }}&group_id={{ filter_group }}&date={{ filter_date }}&page={{ page+1 }}">下一页</a>
-                    {% endif %}
-                </div>
-            </div>
-            {% else %}
-            <div class="empty-state">
-                <h3>暂无报告记录</h3>
-                <p>生成报告后将在此处显示</p>
-            </div>
-            {% endif %}
-        </div>
+        <button onclick="filterReports()">搜索</button>
     </div>
     
-    <div class="progress-overlay" id="progressOverlay">
-        <div class="progress-container">
-            <div class="progress-header">
-                <h3>正在生成报告...</h3>
-            </div>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+    <div class="table-container">
+        {% if reports %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>分组</th>
+                    <th>报告名称</th>
+                    <th>类型</th>
+                    <th>生成时间</th>
+                    <th>文件路径</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td>{{ report[3] or '默认分组' }}</td>
+                    <td>{{ report[1] }}</td>
+                    <td>{{ report[2] }}</td>
+                    <td>{{ report[4] }}</td>
+                    <td title="{{ report[5] }}">{{ report[5] }}</td>
+                    <td>
+                        <div class="action-btns">
+                            <a href="/download_report_file/{{ report[0] }}" class="action-btn btn-download">下载</a>
+                            <button class="action-btn btn-delete" onclick="deleteReport({{ report[0] }})">删除</button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="pagination">
+            <div class="pagination-info">共 {{ total }} 条记录</div>
+            <div class="pagination-links">
+                {% if page > 1 %}
+                <a href="javascript:void(0)" onclick="loadPage('/reports?report_type={{ filter_type }}&group_id={{ filter_group }}&date={{ filter_date }}&page={{ page-1 }}')">上一页</a>
+                {% endif %}
+                {% for p in range(1, total_pages+1) %}
+                <a href="javascript:void(0)" onclick="loadPage('/reports?report_type={{ filter_type }}&group_id={{ filter_group }}&date={{ filter_date }}&page={{ p }}')" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
+                {% endfor %}
+                {% if page < total_pages %}
+                <a href="javascript:void(0)" onclick="loadPage('/reports?report_type={{ filter_type }}&group_id={{ filter_group }}&date={{ filter_date }}&page={{ page+1 }}')">下一页</a>
+                {% endif %}
             </div>
         </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>暂无报告记录</h3>
+            <p>生成报告后将在此处显示</p>
+        </div>
+        {% endif %}
     </div>
-    
-    <script>
-        function createSnowflakes() {
-            const container = document.getElementById('snowContainer');
-            const sizes = ['small', 'medium', 'large', 'xlarge'];
-            const flakeCount = 80;
-            
-            for (let i = 0; i < flakeCount; i++) {
-                const snowflake = document.createElement('div');
-                const size = sizes[Math.floor(Math.random() * sizes.length)];
-                snowflake.className = `snowflake ${size}`;
-                
-                snowflake.style.left = Math.random() * 100 + '%';
-                snowflake.style.top = Math.random() * 20 - 20 + '%';
-                
-                const duration = 8 + Math.random() * 12;
-                snowflake.style.animationDuration = duration + 's';
-                snowflake.style.animationDelay = Math.random() * 10 + 's';
-                
-                const swayAmount = 30 + Math.random() * 40;
-                snowflake.style.setProperty('--sway1', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                snowflake.style.setProperty('--sway2', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                snowflake.style.setProperty('--sway3', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                snowflake.style.setProperty('--sway4', (Math.random() * swayAmount - swayAmount/2) + 'px');
-                
-                container.appendChild(snowflake);
-            }
-        }
-        createSnowflakes();
-        
-        function updateTime() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            
-            const timeStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            document.getElementById('currentTime').textContent = timeStr;
-        }
-        updateTime();
-        setInterval(updateTime, 1000);
-        
-        function animateSidebarItems() {
-            const menuItems = document.querySelectorAll('.menu li');
-            menuItems.forEach((item, index) => {
-                item.style.opacity = '0';
-                item.style.transform = 'translateX(-20px)';
-                item.style.transition = 'all 0.4s ease';
-                setTimeout(() => {
-                    item.style.opacity = '1';
-                    item.style.transform = 'translateX(0)';
-                }, index * 100 + 200);
-            });
-        }
-        animateSidebarItems();
-        
-        function animateButtons() {
-            const buttons = document.querySelectorAll('button');
-            buttons.forEach((btn, index) => {
-                btn.style.position = 'relative';
-                btn.style.overflow = 'hidden';
-                btn.addEventListener('click', function(e) {
-                    const ripple = document.createElement('span');
-                    const rect = this.getBoundingClientRect();
-                    const size = Math.max(rect.width, rect.height);
-                    const x = e.clientX - rect.left - size / 2;
-                    const y = e.clientY - rect.top - size / 2;
-                    ripple.style.width = ripple.style.height = size + 'px';
-                    ripple.style.left = x + 'px';
-                    ripple.style.top = y + 'px';
-                    ripple.style.position = 'absolute';
-                    ripple.style.borderRadius = '50%';
-                    ripple.style.background = 'rgba(255, 255, 255, 0.3)';
-                    ripple.style.transform = 'scale(0)';
-                    ripple.style.animation = 'ripple 0.6s ease-out';
-                    this.appendChild(ripple);
-                    setTimeout(() => ripple.remove(), 600);
-                });
-            });
-        }
-        animateButtons();
 
-        // 设置日期输入框的默认值
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('reportDate').value = today;
+<div class="progress-overlay" id="progressOverlay">
+    <div class="progress-container">
+        <div class="progress-header">
+            <h3>正在生成报告...</h3>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_script %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('reportDate').value = today;
+});
+
+function generateReport() {
+    const reportType = document.getElementById('reportType').value;
+    const groupId = document.getElementById('groupId').value;
+    const reportDate = document.getElementById('reportDate').value;
+    
+    if (!reportType) {
+        alert('请选择报告类型');
+        return;
+    }
+    
+    const overlay = document.getElementById('progressOverlay');
+    const progressFill = document.getElementById('progressFill');
+    
+    overlay.classList.add('show');
+    progressFill.style.width = '0%';
+    
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15 + 5;
+        if (progress > 90) progress = 90;
+        progressFill.style.width = progress + '%';
+    }, 200);
+    
+    fetch('/api/generate_report', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            report_type: reportType,
+            group_id: groupId === 'all' ? null : groupId,
+            report_date: reportDate
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(interval);
+        progressFill.style.width = '100%';
+        
+        setTimeout(() => {
+            overlay.classList.remove('show');
+            if (data.success) {
+                loadPage('/reports');
+            } else {
+                alert('生成失败: ' + (data.message || '未知错误'));
+            }
+        }, 500);
+    })
+    .catch(error => {
+        clearInterval(interval);
+        overlay.classList.remove('show');
+        alert('网络错误');
+    });
+}
+
+function filterReports() {
+    const reportType = document.getElementById('reportType').value;
+    const groupId = document.getElementById('groupId').value;
+    const reportDate = document.getElementById('reportDate').value;
+    
+    let url = '/reports?';
+    if (reportType) url += `report_type=${reportType}&`;
+    if (groupId && groupId !== 'all') url += `group_id=${groupId}&`;
+    if (reportDate) url += `date=${reportDate}&`;
+    
+    loadPage(url);
+}
+
+function resetFilter() {
+    document.getElementById('reportType').value = '';
+    document.getElementById('groupId').value = 'all';
+    document.getElementById('reportDate').value = new Date().toISOString().split('T')[0];
+    loadPage('/reports');
+}
+
+function deleteReport(reportId) {
+    if (confirm('确定要删除这份报告吗？')) {
+        fetch(`/api/delete_report/${reportId}`, {
+            method: 'DELETE'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadPage('/reports');
+            } else {
+                alert('删除失败');
+            }
         });
-        
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = `
-            @keyframes ripple {
-                to {
-                    transform: scale(2);
-                    opacity: 0;
-                }
-            }
-            .menu li a:hover {
-                transform: translateX(5px);
-                box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
-            }
-            .btn-primary {
-                transition: all 0.3s ease;
-            }
-            .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-            }
-            .btn-primary:active {
-                transform: translateY(0);
-            }
-            /* 表格样式 */
-            .data-table {
-                width: 100%;
-                border-collapse: collapse;
-            }
-            .data-table th {
-                background: rgba(102, 126, 234, 0.2);
-                padding: 16px 20px;
-                text-align: left;
-                color: #fff;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            .data-table td {
-                padding: 16px 20px;
-                color: #a0aec0;
-                font-size: 14px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            }
-            .data-table tbody tr:hover {
-                background: rgba(255, 255, 255, 0.05);
-            }
-            /* 按钮样式 */
-            .btn-reset {
-                background: rgba(255, 255, 255, 0.15);
-                color: #fff;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 16px;
-                font-size: 14px;
-                cursor: pointer;
-                transition: all 0.3s ease;
-            }
-            .btn-reset:hover {
-                background: rgba(255, 255, 255, 0.2);
-            }
-            
-            /* 操作按钮样式 */
-            .action-btns {
-                display: flex;
-                flex-direction: row;
-                gap: 5px;
-            }
-            .action-btns .action-btn {
-                padding: 6px 12px;
-                border: none;
-                border-radius: 4px;
-                cursor: pointer;
-                font-size: 12px;
-                transition: all 0.3s ease;
-            }
-            .action-btns .btn-download {
-                background: #3b82f6;
-                color: white;
-            }
-            .action-btns .btn-download:hover {
-                background: #2563eb;
-            }
-            .action-btns .btn-delete {
-                background: #ef4444;
-                color: white;
-            }
-            .action-btns .btn-delete:hover {
-                background: #dc2626;
-            }
-            /* 分页样式 */
-            .pagination {
-                padding: 16px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                border-top: 1px solid rgba(255, 255, 255, 0.05);
-            }
-            .pagination-info {
-                color: #a0aec0;
-                font-size: 13px;
-            }
-            .pagination-links {
-                display: flex;
-                gap: 4px;
-            }
-            .pagination-links a {
-                padding: 6px 12px;
-                border-radius: 4px;
-                color: #a0aec0;
-                text-decoration: none;
-                font-size: 13px;
-                transition: all 0.3s ease;
-            }
-            .pagination-links a:hover {
-                background: rgba(255, 255, 255, 0.1);
-            }
-            .pagination-links a.active {
-                background: #667eea;
-                color: #fff;
-            }
-        `;
-        document.head.appendChild(styleSheet);
-
-        function generateReport() {
-            const reportType = document.getElementById('reportType').value;
-            const groupId = document.getElementById('groupId').value;
-            const startDate = document.getElementById('reportDate').value;
-            const progressOverlay = document.getElementById('progressOverlay');
-            const progressFill = document.getElementById('progressFill');
-            
-            progressOverlay.classList.add('show');
-            progressFill.style.width = '0%';
-            
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 10;
-                if (progress > 90) progress = 90;
-                progressFill.style.width = progress + '%';
-            }, 200);
-            
-            fetch('/api/generate_report', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    report_type: reportType, 
-                    group_id: groupId,
-                    start_date: startDate ? startDate + 'T00:00:00' : null
-                })
-            })
-            .then(response => {
-                clearInterval(progressInterval);
-                progressFill.style.width = '100%';
-                
-                if (response.ok) {
-                    return response.blob();
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || '生成报告失败');
-                    });
-                }
-            })
-            .then(blob => {
-                setTimeout(() => {
-                    progressOverlay.classList.remove('show');
-                    
-                    // 刷新页面以显示新报告
-                    location.reload();
-                }, 500);
-            })
-            .catch(error => {
-                clearInterval(progressInterval);
-                progressOverlay.classList.remove('show');
-                alert('生成报告失败: ' + error.message);
-            });
-        }
-
-        function generateSpecificReport(reportType) {
-            document.getElementById('reportType').value = reportType;
-            generateReport();
-        }
-
-        function filterReports() {
-            const filterType = document.getElementById('reportType').value;
-            const filterGroup = document.getElementById('groupId').value;
-            const filterDate = document.getElementById('reportDate').value;
-            
-            let url = '/reports?';
-            if (filterType) {
-                url += `report_type=${filterType}`;
-            }
-            if (filterGroup && filterGroup !== 'all') {
-                url += url.includes('?') ? '&' : '?';
-                url += `group_id=${filterGroup}`;
-            }
-            if (filterDate) {
-                url += url.includes('?') ? '&' : '?';
-                url += `date=${filterDate}`;
-            }
-            
-            location.href = url;
-        }
-
-        function resetFilter() {
-            document.getElementById('reportType').value = '';
-            document.getElementById('groupId').value = 'all';
-            document.getElementById('reportDate').value = '';
-            location.href = '/reports';
-        }
-
-        function downloadReport(reportType, groupId) {
-            const progressOverlay = document.getElementById('progressOverlay');
-            const progressFill = document.getElementById('progressFill');
-            
-            progressOverlay.classList.add('show');
-            progressFill.style.width = '0%';
-            
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += 10;
-                if (progress > 90) progress = 90;
-                progressFill.style.width = progress + '%';
-            }, 200);
-            
-            fetch('/api/generate_report', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ 
-                    report_type: reportType, 
-                    group_id: groupId
-                })
-            })
-            .then(response => {
-                clearInterval(progressInterval);
-                progressFill.style.width = '100%';
-                
-                if (response.ok) {
-                    return response.blob();
-                } else {
-                    return response.json().then(data => {
-                        throw new Error(data.message || '生成报告失败');
-                    });
-                }
-            })
-            .then(blob => {
-                setTimeout(() => {
-                    progressOverlay.classList.remove('show');
-                    
-                    // 创建下载链接
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${reportType}_report_${new Date().toISOString().slice(0, 19).replace(/[-:T]/g, '')}.docx`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    window.URL.revokeObjectURL(url);
-                }, 500);
-            })
-            .catch(error => {
-                clearInterval(progressInterval);
-                progressOverlay.classList.remove('show');
-                alert('下载报告失败: ' + error.message);
-            });
-        }
-
-        function deleteReport(reportId) {
-            if (!confirm('确定删除该报告吗？')) {
-                return;
-            }
-            
-            fetch(`/api/delete_report/${reportId}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('删除报告失败');
-                }
-            })
-            .catch(error => {
-                alert('网络错误');
-            });
-        }
-    </script>
-    
-    <!-- 科技风特效JS -->
-    <script src="/static/js/tech-effects.js"></script>
-</body>
-</html>
+    }
+}
+</script>
+{% endblock %}
