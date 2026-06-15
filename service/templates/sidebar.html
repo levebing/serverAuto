@@ -1,0 +1,291 @@
+<!-- 移动端菜单按钮 -->
+<button class="mobile-menu-btn" onclick="toggleMobileSidebar()">
+    <svg viewBox="0 0 24 24">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+</button>
+
+<!-- 移动端遮罩层 -->
+<div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileSidebar()"></div>
+
+<aside class="sidebar" id="sidebar">
+    <div class="logo">
+        <h1>服务器巡检系统</h1>
+    </div>
+    
+    <ul class="menu">
+        <li>
+            <a href="/">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 21V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"></path>
+                    <path d="M14 2v4"></path>
+                    <path d="M10 2v4"></path>
+                    <path d="M6 2v4"></path>
+                </svg>
+                服务器列表
+            </a>
+        </li>
+        <li>
+            <a href="/records">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                巡检记录
+            </a>
+        </li>
+        <li>
+            <a href="/tasks">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                定时任务
+            </a>
+        </li>
+        <li>
+            <a href="/reports">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                巡检报告
+            </a>
+        </li>
+        <li>
+            <a href="/inspection_items">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                </svg>
+                巡检项
+            </a>
+        </li>
+        <li>
+            <a href="/faults">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                处置故障
+            </a>
+        </li>
+        <li class="has-submenu">
+            <a href="#" class="submenu-toggle" onclick="toggleSubmenu(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                告警通知
+                <span class="submenu-icon">▼</span>
+            </a>
+            <ul class="submenu">
+                <li><a href="/alert_config">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                    </svg>
+                    告警配置</a></li>
+                <li><a href="/alert_logs">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    告警记录</a></li>
+            </ul>
+        </li>
+        <li class="has-submenu">
+            <a href="#" class="submenu-toggle" onclick="toggleSubmenu(event, this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                </svg>
+                系统设置
+                <span class="submenu-icon">▼</span>
+            </a>
+            <ul class="submenu">
+                <li><a href="/groups">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    分组管理</a></li>
+            </ul>
+        </li>
+    </ul>
+    
+    <div class="sidebar-footer">
+        <div class="current-time" id="currentTime"></div>
+        
+        <!-- 用户菜单 -->
+        <div class="user-menu">
+            <button class="user-menu-btn" onclick="toggleUserMenu()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <span class="username">{{ session.get('username', '用户') }}</span>
+                <svg class="user-menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </button>
+            <div class="user-menu-dropdown" id="userMenuDropdown">
+                <a href="/change_password">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                    </svg>
+                    修改密码
+                </a>
+                <hr>
+                <a href="#" onclick="confirmLogout(); return false;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    退出登录
+                </a>
+            </div>
+        </div>
+    </div>
+</aside>
+
+<script>
+// 全局函数，供 base.html 调用
+function toggleMobileSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    
+    if (sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+        menuBtn.classList.remove('open');
+    } else {
+        sidebar.classList.add('open');
+        overlay.classList.add('show');
+        menuBtn.classList.add('open');
+    }
+}
+
+function toggleUserMenu() {
+    const dropdown = document.getElementById('userMenuDropdown');
+    const btn = document.querySelector('.user-menu-btn');
+    
+    if (dropdown.classList.contains('show')) {
+        dropdown.classList.remove('show');
+        btn.classList.remove('open');
+    } else {
+        dropdown.classList.add('show');
+        btn.classList.add('open');
+    }
+}
+
+function toggleSubmenu(event, element) {
+    event.preventDefault();
+    event.stopPropagation();
+    const parentLi = element.closest('.has-submenu');
+    const submenu = parentLi.querySelector('.submenu');
+    const icon = parentLi.querySelector('.submenu-icon');
+    
+    if (submenu) {
+        const isShowing = submenu.style.display === 'block';
+        submenu.style.display = isShowing ? 'none' : 'block';
+        if (icon) {
+            icon.style.transform = isShowing ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+    }
+}
+
+function confirmLogout() {
+    if (confirm('确定要退出登录吗？')) {
+        window.location.href = '/logout';
+    }
+}
+
+// 更新时间
+function updateTime() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    document.getElementById('currentTime').textContent = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+// 初始化
+updateTime();
+setInterval(updateTime, 1000);
+
+// 点击其他地方关闭用户菜单
+document.addEventListener('click', function(e) {
+    const userMenu = document.querySelector('.user-menu');
+    if (userMenu && !userMenu.contains(e.target)) {
+        const dropdown = document.getElementById('userMenuDropdown');
+        const btn = document.querySelector('.user-menu-btn');
+        dropdown.classList.remove('show');
+        btn.classList.remove('open');
+    }
+});
+
+// 移动端点击菜单链接后关闭侧边栏
+document.querySelectorAll('.sidebar .menu a').forEach(link => {
+    link.addEventListener('click', function() {
+        if (window.innerWidth <= 768) {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+            menuBtn.classList.remove('open');
+        }
+    });
+});
+
+// 窗口大小变化时更新侧边栏状态
+window.addEventListener('resize', function() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('mobileOverlay');
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    
+    if (window.innerWidth <= 768) {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+        if (menuBtn) {
+            menuBtn.classList.remove('open');
+        }
+    } else {
+        sidebar.classList.add('open');
+        overlay.classList.remove('show');
+        if (menuBtn) {
+            menuBtn.classList.remove('open');
+        }
+    }
+});
+
+// 页面加载时初始化移动端侧边栏状态
+document.addEventListener('DOMContentLoaded', function() {
+    if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+        const menuBtn = document.querySelector('.mobile-menu-btn');
+        
+        sidebar.classList.remove('open');
+        overlay.classList.remove('show');
+        if (menuBtn) {
+            menuBtn.classList.remove('open');
+        }
+    }
+});
+</script>

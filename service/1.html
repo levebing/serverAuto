@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器巡检系统 - 科技风动态版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+            color: #e0f7ff;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ========== 动态粒子背景 ========== */
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ========== 科技网格背景 ========== */
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(rgba(73, 160, 255, 0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            pointer-events: none;
+            z-index: 1;
+            animation: gridMove 20s linear infinite;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(30px); }
+        }
+
+        /* ========== 流光效果 ========== */
+        .light-stream {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+            background: 
+                linear-gradient(90deg, transparent 0%, rgba(73, 160, 255, 0.08) 45%, rgba(255, 120, 200, 0.08) 50%, transparent 55%);
+            background-size: 200% 100%;
+            animation: streamMove 8s linear infinite;
+        }
+
+        @keyframes streamMove {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* ========== 左侧边栏 - 淡色科技半透明 ========== */
+        .sidebar {
+            width: 230px;
+            background: rgba(13, 25, 58, 0.7);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(60, 140, 255, 0.2);
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            position: relative;
+        }
+
+        .sidebar::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(73, 160, 255, 0.05) 0%, transparent 100%);
+            pointer-events: none;
+        }
+
+        .sidebar-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #49a0ff;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(73, 160, 255, 0.5);
+        }
+
+        .menu-list {
+            list-style: none;
+        }
+
+        .menu-list li {
+            margin-bottom: 4px;
+            position: relative;
+        }
+
+        .menu-list li a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 13px 20px;
+            color: #c0e0ff;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-list li a::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(73, 160, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .menu-list li a:hover::after {
+            left: 100%;
+        }
+
+        .menu-list li a:hover,
+        .menu-list li.active a {
+            background: rgba(60, 140, 255, 0.15);
+            border-left: 3px solid #49a0ff;
+            color: #ffffff;
+            box-shadow: 0 0 15px rgba(73, 160, 255, 0.3);
+        }
+
+        /* ========== 主内容区 ========== */
+        .main {
+            flex: 1;
+            padding: 25px 30px;
+            z-index: 5;
+            position: relative;
+        }
+
+        .page-header {
+            font-size: 22px;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(73, 160, 255, 0.4);
+        }
+
+        /* ========== 搜索栏 - 科技玻璃感 + 光晕 ========== */
+        .search-bar {
+            background: rgba(13, 25, 58, 0.6);
+            border: 1px solid rgba(60, 140, 255, 0.25);
+            border-radius: 6px;
+            padding: 15px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 22px;
+            backdrop-filter: blur(6px);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(73, 160, 255, 0.1);
+        }
+
+        .search-bar::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(73, 160, 255, 0.1), transparent);
+            animation: barShine 4s linear infinite;
+        }
+
+        @keyframes barShine {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .search-bar select,
+        .search-bar input {
+            padding: 8px 12px;
+            background: rgba(7, 16, 40, 0.7);
+            border: 1px solid rgba(60, 140, 255, 0.25);
+            border-radius: 4px;
+            color: #e0f7ff;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .search-bar select:focus,
+        .search-bar input:focus {
+            border-color: #49a0ff;
+            box-shadow: 0 0 10px rgba(73, 160, 255, 0.3);
+        }
+
+        .btn-blue {
+            padding: 8px 18px;
+            background: linear-gradient(135deg, #2d7cff 0%, #49a0ff 100%);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(73, 160, 255, 0.3);
+        }
+
+        .btn-blue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 20px rgba(73, 160, 255, 0.5);
+        }
+
+        /* ========== 表格卡片 - 科技感 + 光晕 ========== */
+        .card {
+            background: rgba(13, 25, 58, 0.6);
+            border: 1px solid rgba(60, 140, 255, 0.25);
+            border-radius: 8px;
+            overflow: hidden;
+            backdrop-filter: blur(6px);
+            position: relative;
+            box-shadow: 0 0 30px rgba(73, 160, 255, 0.1);
+        }
+
+        .card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(73, 160, 255, 0.5), transparent);
+            animation: borderShine 3s linear infinite;
+        }
+
+        @keyframes borderShine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            position: relative;
+            z-index: 1;
+        }
+
+        th {
+            background: rgba(20, 38, 79, 0.8);
+            color: #a0d8ff;
+            padding: 14px;
+            text-align: left;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(60, 140, 255, 0.25);
+            text-shadow: 0 0 5px rgba(73, 160, 255, 0.3);
+        }
+
+        td {
+            padding: 13px 14px;
+            color: #d6eaff;
+            border-bottom: 1px solid rgba(35, 55, 100, 0.4);
+            transition: all 0.3s;
+        }
+
+        tr:hover td {
+            background: rgba(30, 55, 110, 0.35);
+            box-shadow: inset 0 0 20px rgba(73, 160, 255, 0.1);
+        }
+
+        /* ========== 状态标签 - 发光效果 ========== */
+        .status-normal {
+            color: #00e09a;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 224, 154, 0.5);
+        }
+
+        .status-error {
+            color: #ff5757;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 87, 87, 0.5);
+        }
+
+        /* ========== 按钮 - 动态光晕 ========== */
+        .btn-view {
+            padding: 5px 10px;
+            background: linear-gradient(135deg, #2d7cff 0%, #49a0ff 100%);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            box-shadow: 0 0 5px rgba(73, 160, 255, 0.3);
+        }
+
+        .btn-view:hover {
+            box-shadow: 0 0 15px rgba(73, 160, 255, 0.6);
+            transform: scale(1.05);
+        }
+
+        .btn-del {
+            padding: 5px 10px;
+            background: linear-gradient(135deg, #ff4757 0%, #ff6b7a 100%);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+            box-shadow: 0 0 5px rgba(255, 71, 87, 0.3);
+        }
+
+        .btn-del:hover {
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+            transform: scale(1.05);
+        }
+
+        /* ========== 分页 ========== */
+        .pagination {
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #a1a1aa;
+            font-size: 14px;
+            border-top: 1px solid rgba(60, 140, 255, 0.2);
+        }
+
+        .page-numbers {
+            display: flex;
+            gap: 8px;
+        }
+
+        .page-numbers button {
+            width: 28px;
+            height: 28px;
+            border: 1px solid rgba(60, 140, 255, 0.3);
+            background: transparent;
+            color: #a1a1aa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .page-numbers button:hover,
+        .page-numbers button.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+            box-shadow: 0 0 10px rgba(37, 99, 235, 0.5);
+        }
+
+        /* ========== 侧边栏底部 ========== */
+        .sidebar-footer {
+            padding: 20px;
+            margin-top: auto;
+            border-top: 1px solid rgba(60, 140, 255, 0.15);
+        }
+
+        .time-display {
+            color: #a1a1aa;
+            font-size: 13px;
+            margin-bottom: 12px;
+            text-shadow: 0 0 5px rgba(73, 160, 255, 0.2);
+        }
+
+        .logout-btn {
+            width: 100%;
+            padding: 10px;
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.3);
+        }
+
+        .logout-btn:hover {
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子容器 -->
+    <div id="particles-js"></div>
+
+    <!-- 科技网格背景 -->
+    <div class="bg-grid"></div>
+
+    <!-- 流光效果 -->
+    <div class="light-stream"></div>
+
+    <!-- 左侧菜单 -->
+    <div class="sidebar">
+        <div>
+            <div class="sidebar-title">服务器巡检系统</div>
+            <ul class="menu-list">
+                <li><a href="#">📊 服务器列表</a></li>
+                <li class="active"><a href="#">📝 巡检记录</a></li>
+                <li><a href="#">⏰ 定时任务</a></li>
+                <li><a href="#">📄 巡检报告</a></li>
+                <li><a href="#">🔍 巡检项</a></li>
+                <li><a href="#">⚙️ 系统设置</a></li>
+            </ul>
+        </div>
+        <div class="sidebar-footer">
+            <div class="time-display">2026-05-14 09:57:38</div>
+            <button class="logout-btn">退出登录</button>
+        </div>
+    </div>
+
+    <!-- 主内容 -->
+    <div class="main">
+        <div class="page-header">巡检记录列表</div>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar">
+            <select>
+                <option>全部分组</option>
+            </select>
+            <input type="text" placeholder="IP">
+            <button class="btn-blue">搜索</button>
+            <button class="btn-blue" style="background: linear-gradient(135deg, #3f3f46 0%, #52525b 100%);">重置</button>
+        </div>
+
+        <!-- 表格 -->
+        <div class="card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>分组</th>
+                        <th>服务名称</th>
+                        <th>巡检结果</th>
+                        <th>巡检时间</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>test</td>
+                        <td>189</td>
+                        <td><span class="status-normal">✅ 正常 | CPU 5%, 内存 26%, / 50%, /boot 20%, /home 3%, docker:root 2274 2218 0 3月16 ? 00:00:00 sh -..., ngir</span></td>
+                        <td>2026-05-14 09:25:13</td>
+                        <td>
+                            <button class="btn-view">查看</button>
+                            <button class="btn-view" style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);">下载</button>
+                            <button class="btn-del">删除</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>test</td>
+                        <td>192.168.30.92</td>
+                        <td><span class="status-error">⚠️ 告警 | CPU 4%, 内存 49%, / 93%, /boot 19%, /home 88%, docker:root 1287 1 1月16 ? 1-06:05:39 ..., nginx:ngi</span></td>
+                        <td>2026-05-12 16:40:29</td>
+                        <td>
+                            <button class="btn-view">查看</button>
+                            <button class="btn-view" style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);">下载</button>
+                            <button class="btn-del">删除</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>test</td>
+                        <td>189</td>
+                        <td><span class="status-normal">✅ 正常 | CPU 7%, 内存 24%, / 49%, /boot 20%, /home 3%</span></td>
+                        <td>2026-04-27 11:32:42</td>
+                        <td>
+                            <button class="btn-view">查看</button>
+                            <button class="btn-view" style="background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);">下载</button>
+                            <button class="btn-del">删除</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="pagination">
+                <span>共 25 条记录</span>
+                <div class="page-numbers">
+                    <button class="active">1</button>
+                    <button>2</button>
+                    <button>3</button>
+                    <button>下一页</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 粒子特效JS -->
+    <script>
+        // 粒子系统
+        class ParticleSystem {
+            constructor(containerId) {
+                this.container = document.getElementById(containerId);
+                this.particles = [];
+                this.particleCount = 80;
+                this.init();
+            }
+
+            init() {
+                for (let i = 0; i < this.particleCount; i++) {
+                    this.createParticle();
+                }
+                this.animate();
+            }
+
+            createParticle() {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: absolute;
+                    width: ${Math.random() * 3 + 1}px;
+                    height: ${Math.random() * 3 + 1}px;
+                    background: rgba(73, 160, 255, ${Math.random() * 0.5 + 0.3});
+                    border-radius: 50%;
+                    box-shadow: 0 0 ${Math.random() * 5 + 2}px rgba(73, 160, 255, 0.5);
+                    pointer-events: none;
+                `;
+                this.container.appendChild(particle);
+                this.particles.push({
+                    el: particle,
+                    x: Math.random() * window.innerWidth,
+                    y: Math.random() * window.innerHeight,
+                    vx: (Math.random() - 0.5) * 0.5,
+                    vy: (Math.random() - 0.5) * 0.5,
+                    life: Math.random() * 100 + 100
+                });
+            }
+
+            animate() {
+                this.particles.forEach(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life--;
+
+                    if (p.life <= 0 || p.x < 0 || p.x > window.innerWidth || p.y < 0 || p.y > window.innerHeight) {
+                        p.x = Math.random() * window.innerWidth;
+                        p.y = Math.random() * window.innerHeight;
+                        p.life = Math.random() * 100 + 100;
+                    }
+
+                    p.el.style.left = p.x + 'px';
+                    p.el.style.top = p.y + 'px';
+                    p.el.style.opacity = p.life / 200;
+                });
+
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+
+        // 初始化粒子
+        new ParticleSystem('particles-js');
+    </script>
+</body>
+</html>

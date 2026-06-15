@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>告警通知配置 - 服务器巡检系统</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+            color: #e2e8f0;
+        }
+        
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 30px;
+            overflow-y: auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .header h2 {
+            font-size: 24px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .form-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 800px;
+        }
+        
+        .form-section {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .form-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        
+        .form-group label.required::after {
+            content: " *";
+            color: #ef4444;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            appearance: none;
+            cursor: pointer;
+        }
+        
+        .form-group select {
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+        }
+        
+        .form-group select option {
+            background: #1a1a2e;
+            color: #e2e8f0;
+            padding: 8px 12px;
+            border: none;
+        }
+        
+        .form-group select option:hover {
+            background: #667eea;
+            color: #fff;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #6b7280;
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 6px;
+            color: #6b7280;
+            font-size: 12px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #a0aec0;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        
+        .btn-test {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .btn-test:hover {
+            background: rgba(34, 197, 94, 0.3);
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .message.success {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #22c55e;
+        }
+        
+        .message.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+        
+        .provider-info {
+            background: rgba(102, 126, 234, 0.1);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        
+        .provider-info h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .provider-info p {
+            color: #a0aec0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        .provider-info code {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .template-examples {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 10px;
+        }
+        
+        .template-examples h5 {
+            color: #a0aec0;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+        
+        .template-examples ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .template-examples li {
+            color: #6b7280;
+            font-size: 12px;
+            padding: 4px 0;
+            font-family: monospace;
+        }
+        
+        .switch-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 26px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+        
+        .switch-label {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+        
+        @media screen and (max-width: 768px) {
+            .main-content {
+                margin-left: 0;
+                padding: 70px 15px 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'sidebar.html' %}
+    
+    <main class="main-content">
+        <div class="header">
+            <h2>
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                告警通知配置
+            </h2>
+        </div>
+        
+        {% if message %}
+        <div class="message {{ 'success' if success else 'error' }}">
+            {{ message }}
+        </div>
+        {% endif %}
+        
+        <div class="form-card">
+            <form method="POST" id="alertConfigForm">
+                <!-- 基础配置 -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6m4.22-10.22l4.24-4.24M6.34 6.34L2.1 2.1m17.9 9.9h-6m-6 0H2.1m15.12 4.24l4.24 4.24M6.34 17.66l-4.24 4.24"></path>
+                        </svg>
+                        基础配置
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="required">短信服务商</label>
+                        <select name="provider" id="provider" required onchange="updateProviderInfo()">
+                            <option value="">请选择服务商</option>
+                            <option value="custom" {{ 'selected' if config and config[1] == 'custom' else '' }}>自研短信服务</option>
+                            <option value="aliyun" {{ 'selected' if config and config[1] == 'aliyun' else '' }}>阿里云短信</option>
+                            <option value="tencent" {{ 'selected' if config and config[1] == 'tencent' else '' }}>腾讯云短信</option>
+                            <option value="baidu" {{ 'selected' if config and config[1] == 'baidu' else '' }}>百度云短信</option>
+                        </select>
+                    </div>
+                    
+                    <div class="provider-info" id="providerInfo">
+                        <h4>请选择短信服务商</h4>
+                        <p>选择服务商后将显示对应的配置说明</p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>启用告警通知</label>
+                        <div class="switch-group">
+                            <label class="switch">
+                                <input type="checkbox" name="is_enabled" value="1" {{ 'checked' if not config or config[2] == 1 else '' }}>
+                                <span class="slider"></span>
+                            </label>
+                            <span class="switch-label">开启后将自动发送短信告警</span>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="required">接收手机号</label>
+                        <input type="text" name="phone_numbers" placeholder="多个手机号用逗号分隔，如：13800138000,13900139000" value="{{ config[12] if config else '' }}" required>
+                        <small>多个手机号请用英文逗号分隔</small>
+                    </div>
+                </div>
+                
+                <!-- 阿里云配置 -->
+                <div class="form-section" id="aliyunConfig" style="display: none;">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        阿里云短信配置
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="required">AccessKey ID</label>
+                            <input type="text" name="access_key_id" placeholder="请输入AccessKey ID" value="{{ config[3] if config else '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">AccessKey Secret</label>
+                            <input type="password" name="access_key_secret" placeholder="请输入AccessKey Secret" value="{{ config[4] if config else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="required">短信签名</label>
+                        <input type="text" name="sign_name" placeholder="请输入已审核通过的短信签名" value="{{ config[7] if config else '' }}">
+                    </div>
+                </div>
+                
+                <!-- 腾讯云配置 -->
+                <div class="form-section" id="tencentConfig" style="display: none;">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        腾讯云短信配置
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="required">SecretId</label>
+                            <input type="text" name="secret_id" placeholder="请输入SecretId" value="{{ config[5] if config else '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">SecretKey</label>
+                            <input type="password" name="secret_key" placeholder="请输入SecretKey" value="{{ config[6] if config else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="required">短信签名</label>
+                            <input type="text" name="sign_name_tencent" placeholder="请输入短信签名" value="{{ config[7] if config else '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">应用ID (SdkAppid)</label>
+                            <input type="text" name="app_id" placeholder="请输入SdkAppid" value="{{ config[8] if config else '' }}">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 百度云配置 -->
+                <div class="form-section" id="baiduConfig" style="display: none;">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        百度云短信配置
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="required">Access Key ID</label>
+                            <input type="text" name="access_key_id_baidu" placeholder="请输入Access Key ID" value="{{ config[3] if config else '' }}">
+                        </div>
+                        <div class="form-group">
+                            <label class="required">Secret Access Key</label>
+                            <input type="password" name="secret_access_key" placeholder="请输入Secret Access Key" value="{{ config[4] if config else '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="required">短信签名ID</label>
+                        <input type="text" name="sign_name_baidu" placeholder="请输入短信签名ID" value="{{ config[7] if config else '' }}">
+                    </div>
+                </div>
+                
+                <!-- 自研短信服务配置 -->
+                <div class="form-section" id="customConfig" style="display: none;">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        自研短信服务配置
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="required">短信接口URL</label>
+                        <input type="text" name="custom_api_url" placeholder="请输入自研短信接口URL，如：http://your-sms-server/send" value="{{ config[13] if config else '' }}">
+                        <small>接口需支持POST请求，接收参数：phone_numbers(手机号), template_code(模板代码), template_params(模板参数JSON)</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>接口请求头（可选）</label>
+                        <textarea name="custom_headers" placeholder="请输入自定义请求头，JSON格式，如：{\"Authorization\": \"Bearer token\"}" rows="3">{{ config[14] if config else '' }}</textarea>
+                    </div>
+                </div>
+                
+                <!-- 短信模板配置 -->
+                <div class="form-section">
+                    <div class="section-title">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        短信模板配置
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>巡检告警模板代码</label>
+                        <input type="text" name="inspection_template_code" placeholder="请输入巡检告警短信模板代码" value="{{ config[9] if config else '' }}">
+                        <div class="template-examples">
+                            <h5>模板变量示例：</h5>
+                            <ul>
+                                <li>${server_name} - 服务器名称</li>
+                                <li>${server_ip} - 服务器IP</li>
+                                <li>${alert_item} - 告警项</li>
+                                <li>${alert_value} - 告警值</li>
+                                <li>${threshold} - 阈值</li>
+                                <li>${time} - 告警时间</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>故障告警模板代码</label>
+                        <input type="text" name="fault_template_code" placeholder="请输入故障告警短信模板代码" value="{{ config[10] if config else '' }}">
+                        <div class="template-examples">
+                            <h5>模板变量示例：</h5>
+                            <ul>
+                                <li>${fault_name} - 故障名称</li>
+                                <li>${fault_level} - 故障级别</li>
+                                <li>${server_name} - 服务器名称</li>
+                                <li>${occurrence_time} - 发生时间</li>
+                                <li>${description} - 故障描述</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>系统告警模板代码</label>
+                        <input type="text" name="system_template_code" placeholder="请输入系统告警短信模板代码" value="{{ config[11] if config else '' }}">
+                        <div class="template-examples">
+                            <h5>模板变量示例：</h5>
+                            <ul>
+                                <li>${alert_title} - 告警标题</li>
+                                <li>${alert_content} - 告警内容</li>
+                                <li>${time} - 告警时间</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="goBack()">返回</button>
+                    <button type="button" class="btn btn-test" onclick="testSMS()">测试发送</button>
+                    <button type="submit" class="btn btn-primary">保存配置</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    
+    <script>
+        // 服务商信息
+        const providerInfo = {
+            custom: {
+                title: '自研短信服务',
+                desc: '请配置自研短信服务接口URL，系统将通过HTTP POST请求调用该接口发送短信。'
+            },
+            aliyun: {
+                title: '阿里云短信服务',
+                desc: '请前往 <a href="https://www.aliyun.com/product/sms" target="_blank">阿里云短信服务控制台</a> 获取 AccessKey ID 和 AccessKey Secret，并确保已创建短信签名和模板。'
+            },
+            tencent: {
+                title: '腾讯云短信服务',
+                desc: '请前往 <a href="https://cloud.tencent.com/product/sms" target="_blank">腾讯云短信控制台</a> 获取 SecretId 和 SecretKey，并确保已创建短信签名、模板和应用。'
+            },
+            baidu: {
+                title: '百度云短信服务',
+                desc: '请前往 <a href="https://cloud.baidu.com/product/sms.html" target="_blank">百度云短信控制台</a> 获取 Access Key ID 和 Secret Access Key，并确保已创建短信签名和模板。'
+            }
+        };
+        
+        function updateProviderInfo() {
+            const provider = document.getElementById('provider').value;
+            const infoDiv = document.getElementById('providerInfo');
+            
+            // 隐藏所有配置区域
+            document.getElementById('aliyunConfig').style.display = 'none';
+            document.getElementById('tencentConfig').style.display = 'none';
+            document.getElementById('baiduConfig').style.display = 'none';
+            document.getElementById('customConfig').style.display = 'none';
+            
+            if (provider && providerInfo[provider]) {
+                infoDiv.innerHTML = `
+                    <h4>${providerInfo[provider].title}</h4>
+                    <p>${providerInfo[provider].desc}</p>
+                `;
+                document.getElementById(provider + 'Config').style.display = 'block';
+            } else {
+                infoDiv.innerHTML = `
+                    <h4>请选择短信服务商</h4>
+                    <p>选择服务商后将显示对应的配置说明</p>
+                `;
+            }
+        }
+        
+        function goBack() {
+            window.location.href = '/';
+        }
+        
+        function testSMS() {
+            const phoneNumbers = document.querySelector('input[name="phone_numbers"]').value;
+            if (!phoneNumbers) {
+                alert('请先填写接收手机号');
+                return;
+            }
+            
+            const provider = document.getElementById('provider').value;
+            if (!provider) {
+                alert('请先选择短信服务商');
+                return;
+            }
+            
+            // 收集表单数据
+            const formData = new FormData(document.getElementById('alertConfigForm'));
+            
+            fetch('/api/test_sms', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+            })
+            .catch(error => {
+                alert('测试发送失败: ' + error.message);
+            });
+        }
+        
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateProviderInfo();
+        });
+    </script>
+</body>
+</html>

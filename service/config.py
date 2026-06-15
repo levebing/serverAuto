@@ -40,3 +40,14 @@ REPORT_STORAGE = {
 
 # 密码加密密钥（重要：生产环境请使用环境变量配置）
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "u5DriJCI9KBRrCD__P_345u0NxC82W1wIfQ9w9Y19QQ=")
+
+# SSH连接配置
+SSH_CONFIG = {
+    'connection_timeout': int(os.getenv("SSH_CONNECTION_TIMEOUT", 10)),
+    'command_timeout': int(os.getenv("SSH_COMMAND_TIMEOUT", 30)),
+    'max_retries': int(os.getenv("SSH_MAX_RETRIES", 2)),
+    'retry_delay': int(os.getenv("SSH_RETRY_DELAY", 2)),
+    'banner_timeout': int(os.getenv("SSH_BANNER_TIMEOUT", 10)),
+    'enable_pre_check': os.getenv("SSH_ENABLE_PRE_CHECK", "true").lower() == "true",
+    'enable_connection_test': os.getenv("SSH_ENABLE_CONNECTION_TEST", "true").lower() == "true"
+}

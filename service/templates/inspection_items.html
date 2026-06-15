@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器巡检系统 - 巡检项管理</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+            color: #fff;
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+        }
+        /* 禁用原有背景动画 */
+        .bg-animation,
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3,
+        .snow-container,
+        .wind-gust {
+            display: none !important;
+        }
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            z-index: -4;
+            animation: gradient-shift 15s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0% {
+                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            }
+
+            33% {
+                background: linear-gradient(135deg, #1a1a2e 0%, #4a4a8a 50%, #16213e 100%);
+            }
+
+            66% {
+                background: linear-gradient(135deg, #0d0d1a 0%, #5a4a9a 50%, #1f1f3a 100%);
+            }
+
+            100% {
+                background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            }
+        }
+
+        .bg-grid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -3;
+            background-image:
+                linear-gradient(rgba(102, 126, 234, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(102, 126, 234, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 20s linear infinite;
+        }
+
+        @keyframes grid-move {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(50px, 50px);
+            }
+        }
+
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3 {
+            position: fixed;
+            border-radius: 50%;
+            opacity: 0.4;
+            filter: blur(80px);
+            z-index: -3;
+            animation: glow-float 20s ease-in-out infinite;
+        }
+
+        .bg-glow-1 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #667eea 0%, transparent 70%);
+            top: -150px;
+            right: -150px;
+            animation-delay: 0s;
+        }
+
+        .bg-glow-2 {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, #764ba2 0%, transparent 70%);
+            bottom: -100px;
+            left: -100px;
+            animation-delay: -7s;
+        }
+
+        .bg-glow-3 {
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, #f093fb 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -14s;
+        }
+
+        @keyframes glow-float {
+
+            0%,
+            100% {
+                transform: translate(0, 0) scale(1);
+                opacity: 0.3;
+            }
+
+            25% {
+                transform: translate(50px, -30px) scale(1.1);
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: translate(30px, 50px) scale(0.9);
+                opacity: 0.4;
+            }
+
+            75% {
+                transform: translate(-30px, 30px) scale(1.05);
+                opacity: 0.45;
+            }
+        }
+
+        .snow-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .snowflake {
+            position: absolute;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+            border-radius: 50%;
+            animation: snowfall linear infinite;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.6), 0 0 12px rgba(255, 255, 255, 0.3);
+        }
+
+        .snowflake.small {
+            width: 3px;
+            height: 3px;
+        }
+
+        .snowflake.medium {
+            width: 5px;
+            height: 5px;
+        }
+
+        .snowflake.large {
+            width: 8px;
+            height: 8px;
+        }
+
+        .snowflake.xlarge {
+            width: 12px;
+            height: 12px;
+        }
+
+        @keyframes snowfall {
+            0% {
+                transform: translateY(-20px) translateX(0) rotate(0deg) scale(0);
+                opacity: 0;
+            }
+
+            5% {
+                opacity: 1;
+                transform: translateY(0) translateX(0) rotate(0deg) scale(1);
+            }
+
+            25% {
+                transform: translateY(25vh) translateX(var(--sway1, 20px)) rotate(180deg) scale(1);
+            }
+
+            50% {
+                transform: translateY(50vh) translateX(var(--sway2, -15px)) rotate(360deg) scale(0.9);
+            }
+
+            75% {
+                transform: translateY(75vh) translateX(var(--sway3, 25px)) rotate(540deg) scale(1);
+            }
+
+            100% {
+                transform: translateY(105vh) translateX(var(--sway4, -10px)) rotate(720deg) scale(0.8);
+                opacity: 0.3;
+            }
+        }
+
+        .wind-gust {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
+            animation: wind-blow 8s ease-in-out infinite;
+            opacity: 0;
+        }
+
+        @keyframes wind-blow {
+
+            0%,
+            100% {
+                transform: translateX(-100%);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 0.5;
+            }
+
+            50% {
+                transform: translateX(100%);
+                opacity: 0.3;
+            }
+
+            60% {
+                opacity: 0;
+            }
+        }
+
+        .container {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 10;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            padding: 0 20px;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 18px;
+            color: #fff;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .menu {
+            list-style: none;
+        }
+
+        .menu li {
+            margin-bottom: 8px;
+        }
+
+        .menu li a {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            color: #a0aec0;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .menu li a svg {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+        }
+
+        .menu li a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            color: #fff;
+            transform: translateX(5px);
+        }
+
+        .menu li a.active {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+        }
+
+        .menu li.has-submenu {
+            position: relative;
+        }
+
+        .menu li.has-submenu .submenu-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu li.has-submenu .submenu-icon {
+            font-size: 10px;
+            transition: transform 0.3s ease;
+        }
+
+        .menu li.has-submenu.active .submenu-icon {
+            transform: rotate(180deg);
+        }
+
+        .menu li.has-submenu .submenu {
+            position: absolute;
+            left: 0;
+            top: 100%;
+            width: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            display: none;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu li.has-submenu:hover .submenu {
+            display: block;
+        }
+
+        .menu li.has-submenu .submenu li a {
+            padding: 12px 16px;
+            border-left: none;
+            border-radius: 0;
+        }
+
+        .menu li.has-submenu .submenu li a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            border-left: none;
+        }
+
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 46, 0.95);
+        }
+        .sidebar-footer .current-time {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .sidebar-footer .logout-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-footer .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .sidebar-footer .logout-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 24px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .header-left h2 {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .header-right {
+            color: #a0aec0;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: #fff;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #a0aec0;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .form-control::placeholder {
+            color: #6c757d;
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 14px 16px;
+            text-align: left;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            color: #a0aec0;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-edit {
+            background: #f59e0b;
+            color: #fff;
+        }
+
+        .btn-edit:hover {
+            background: #d97706;
+        }
+
+        .btn-toggle {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .btn-toggle:hover {
+            background: #059669;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-delete:hover {
+            background: #dc2626;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.enabled {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .status-badge.disabled {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .message.error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 粒子背景容器 -->
+    <div id="particles-js"></div>
+    <div class="bg-animation"></div>
+    <div class="bg-grid"></div>
+    <div class="snow-container" id="snowContainer"></div>
+    <div class="wind-gust"></div>
+
+    {% include 'sidebar.html' %}
+
+    <main class="main-content">
+            <div class="header">
+                <div class="header-left">
+                    <h2>⚙️ 巡检项</h2>
+                </div>
+                <div class="header-right">
+                    <a href="/inspection_item" class="btn btn-add">+ 添加巡检项</a>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>序号</th>
+                            <th>巡检项名称</th>
+                            <th>执行命令</th>
+                            <th>操作系统</th>
+                            <th>描述</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in inspection_items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ item[1] }}</td>
+                            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                                title="{{ item[2] }}">{{ item[2] }}</td>
+                            <td><span class="os-badge os-{{ item[4] or 'linux' }}">{% if item[4] == 'windows' %}Windows{% else %}Linux{% endif %}</span></td>
+                            <td>{{ item[3] or '-' }}</td>
+                            <td>
+                                <span class="status-badge {% if item[6] %}enabled{% else %}disabled{% endif %}">
+                                    {% if item[6] %}启用{% else %}禁用{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-btns">
+                                    <a href="/inspection_item?id={{ item[0] }}" class="action-btn btn-edit">编辑</a>
+                                    <button class="action-btn btn-toggle"
+                                        onclick="toggleItem({{ item[0] }}, {{ 0 if item[6] else 1 }})">
+                                        {% if item[6] %}禁用{% else %}启用{% endif %}
+                                    </button>
+                                    <button class="action-btn btn-delete"
+                                        onclick="deleteItem({{ item[0] }})">删除</button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if total > per_page %}
+                <div class="pagination">
+                    <div class="pagination-info">共 {{ total }} 条记录</div>
+                    <div class="pagination-links">
+                        {% if page > 1 %}
+                        <a href="/inspection_items?page={{ page-1 }}{% if os_type %}&os_type={{ os_type }}{% endif %}">上一页</a>
+                        {% endif %}
+                        {% for p in range(1, total_pages+1) %}
+                        <a href="/inspection_items?page={{ p }}{% if os_type %}&os_type={{ os_type }}{% endif %}" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
+                        {% endfor %}
+                        {% if page < total_pages %}
+                        <a href="/inspection_items?page={{ page+1 }}{% if os_type %}&os_type={{ os_type }}{% endif %}">下一页</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if not inspection_items %}
+                <div class="empty-state">
+                    <h3>暂无巡检项</h3>
+                    <p>点击上方按钮添加巡检项</p>
+                </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <!-- 添加/编辑模态框 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">添加巡检项</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+
+            <div id="modalMessage"></div>
+
+            <form id="itemForm">
+                <input type="hidden" id="itemId">
+
+                <div class="form-group">
+                    <label for="itemName">巡检项名称 *</label>
+                    <input type="text" id="itemName" class="form-control" required placeholder="请输入巡检项名称">
+                </div>
+
+                <div class="form-group">
+                    <label for="itemCommand">执行命令 *</label>
+                    <textarea id="itemCommand" class="form-control" required placeholder="请输入要执行的shell命令"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemDescription">描述</label>
+                    <textarea id="itemDescription" class="form-control" placeholder="请输入巡检项描述（可选）"></textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '添加巡检项';
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemCommand').value = '';
+            document.getElementById('itemDescription').value = '';
+            document.getElementById('modalMessage').innerHTML = '';
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function showEditModal(id, name, command, description) {
+            document.getElementById('modalTitle').textContent = '编辑巡检项';
+            document.getElementById('itemId').value = id;
+            document.getElementById('itemName').value = name;
+            document.getElementById('itemCommand').value = command;
+            document.getElementById('itemDescription').value = description;
+            document.getElementById('modalMessage').innerHTML = '';
+            document.getElementById('modalOverlay').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+
+        document.getElementById('itemForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const id = document.getElementById('itemId').value;
+            const name = document.getElementById('itemName').value;
+            const command = document.getElementById('itemCommand').value;
+            const description = document.getElementById('itemDescription').value;
+
+            const url = id ? '/api/update_inspection_item' : '/api/add_inspection_item';
+            const method = 'POST';
+
+            fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: id,
+                    name: name,
+                    command: command,
+                    description: description
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('modalMessage').innerHTML = '<div class="message success">' + (id ? '更新成功' : '添加成功') + '</div>';
+                        setTimeout(() => {
+                            location.reload();
+                        }, 1000);
+                    } else {
+                        document.getElementById('modalMessage').innerHTML = '<div class="message error">' + data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('modalMessage').innerHTML = '<div class="message error">操作失败</div>';
+                });
+        });
+
+        function toggleItem(id, isEnabled) {
+            fetch('/api/toggle_inspection_item', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    id: id,
+                    is_enabled: isEnabled
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('操作失败');
+                    }
+                });
+        }
+
+        function deleteItem(id) {
+            if (!confirm('确定删除该巡检项吗？')) {
+                return;
+            }
+
+            fetch(`/api/delete_inspection_item/${id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('删除失败');
+                    }
+                });
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('modalOverlay').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // 创建雪花效果
+        function createSnowflakes() {
+            const container = document.getElementById('snowContainer');
+            const sizes = ['small', 'medium', 'large', 'xlarge'];
+            const flakeCount = 80;
+
+            for (let i = 0; i < flakeCount; i++) {
+                const snowflake = document.createElement('div');
+                const size = sizes[Math.floor(Math.random() * sizes.length)];
+                snowflake.className = `snowflake ${size}`;
+
+                snowflake.style.left = Math.random() * 100 + '%';
+                snowflake.style.top = Math.random() * 20 - 20 + '%';
+
+                const duration = 8 + Math.random() * 12;
+                snowflake.style.animationDuration = duration + 's';
+                snowflake.style.animationDelay = Math.random() * 10 + 's';
+
+                const swayAmount = 30 + Math.random() * 40;
+                snowflake.style.setProperty('--sway1', (Math.random() * swayAmount - swayAmount / 2) + 'px');
+                snowflake.style.setProperty('--sway2', (Math.random() * swayAmount - swayAmount / 2) + 'px');
+                snowflake.style.setProperty('--sway3', (Math.random() * swayAmount - swayAmount / 2) + 'px');
+                snowflake.style.setProperty('--sway4', (Math.random() * swayAmount - swayAmount / 2) + 'px');
+
+                container.appendChild(snowflake);
+            }
+        }
+        createSnowflakes();
+
+        // 更新时间
+        function updateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        // 初始化时间并每秒更新
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+    
+    <!-- 科技风特效JS -->
+    <script src="/static/js/tech-effects.js"></script>
+</body>
+
+</html>

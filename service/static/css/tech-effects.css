@@ -1,0 +1,888 @@
+/* ========== 动态粒子背景容器 ========== */
+#particles-js {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ========== 科技网格背景 ========== */
+.bg-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(rgba(73, 160, 255, 0.1) 1px, transparent 1px);
+    background-size: 30px 30px;
+    pointer-events: none;
+    z-index: 1;
+    animation: gridMove 20s linear infinite;
+}
+
+@keyframes gridMove {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(30px); }
+}
+
+/* ========== 水平流光效果 ========== */
+.light-stream {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    background: 
+        linear-gradient(90deg, transparent 0%, rgba(73, 160, 255, 0.08) 45%, rgba(255, 120, 200, 0.08) 50%, transparent 55%);
+    background-size: 200% 100%;
+    animation: streamMove 8s linear infinite;
+}
+
+@keyframes streamMove {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ========== 侧边栏 - 淡色科技半透明 ========== */
+.sidebar {
+    width: 280px;
+    background: rgba(26, 26, 46, 0.95);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 20px 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+}
+
+.sidebar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, rgba(73, 160, 255, 0.05) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+/* 侧边栏 Logo */
+.sidebar .logo {
+    padding: 0 20px;
+    margin-bottom: 30px;
+}
+
+.sidebar .logo h1 {
+    font-size: 18px;
+    color: #fff;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+/* 侧边栏菜单 */
+.sidebar .menu {
+    list-style: none;
+    padding: 0 10px;
+    flex: 1;
+}
+
+.sidebar .menu li {
+    margin-bottom: 8px;
+}
+
+.sidebar .menu li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 12px;
+    color: #a0aec0;
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar .menu li a svg {
+    width: 18px;
+    height: 18px;
+    margin-right: 10px;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+.sidebar .menu li a:hover {
+    background: rgba(102, 126, 234, 0.2);
+    color: #fff;
+    transform: translateX(5px);
+}
+
+.sidebar .menu li a.active {
+    background: rgba(102, 126, 234, 0.3);
+    color: #fff;
+}
+
+/* 子菜单 */
+.sidebar .menu li.has-submenu {
+    position: relative;
+}
+
+.sidebar .menu li.has-submenu .submenu-toggle {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar .menu li.has-submenu .submenu-icon {
+    font-size: 10px;
+    transition: transform 0.3s ease;
+}
+
+.sidebar .menu li.has-submenu:hover .submenu-icon {
+    transform: rotate(180deg);
+}
+
+.sidebar .menu li.has-submenu .submenu {
+    position: relative;
+    width: 100%;
+    background: rgba(26, 26, 46, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    display: none;
+    z-index: 100;
+    backdrop-filter: blur(10px);
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar .menu li.has-submenu:hover .submenu {
+    display: block;
+}
+
+.sidebar .menu li.has-submenu .submenu li {
+    margin: 0;
+}
+
+.sidebar .menu li.has-submenu .submenu li a {
+    padding: 12px 16px;
+    border-radius: 0;
+    white-space: nowrap;
+}
+
+.sidebar .menu li.has-submenu .submenu li a:hover {
+    transform: none;
+}
+
+/* 侧边栏底部 */
+.sidebar .sidebar-footer {
+    position: relative;
+    padding: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(26, 26, 46, 0.95);
+}
+
+.sidebar .sidebar-footer .current-time {
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 18px;
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+.sidebar .sidebar-footer .logout-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    background: rgba(239, 68, 68, 0.15);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 6px;
+    color: #ef4444;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sidebar .sidebar-footer .logout-btn:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.5);
+}
+
+.sidebar .sidebar-footer .logout-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* ========== 搜索栏 - 边框流光动画 ========== */
+.search-bar {
+    background: rgba(13, 25, 58, 0.6);
+    border: 1px solid rgba(60, 140, 255, 0.25);
+    border-radius: 6px;
+    padding: 15px 20px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    backdrop-filter: blur(6px);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(73, 160, 255, 0.1);
+}
+
+.search-bar::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(73, 160, 255, 0.2), transparent);
+    animation: barShine 4s linear infinite;
+}
+
+@keyframes barShine {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* ========== 卡片 - 边框流光动画 ========== */
+.card, .table-container {
+    background: rgba(13, 25, 58, 0.6);
+    border: 1px solid rgba(60, 140, 255, 0.25);
+    border-radius: 8px;
+    overflow: hidden;
+    backdrop-filter: blur(6px);
+    position: relative;
+    box-shadow: 0 0 30px rgba(73, 160, 255, 0.1);
+}
+
+.card::before, .table-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(73, 160, 255, 0.5), transparent);
+    animation: borderShine 3s linear infinite;
+}
+
+@keyframes borderShine {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+/* ========== 状态文字发光 - 正常状态 ========== */
+.status-normal, .status-success {
+    color: #00e09a;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(0, 224, 154, 0.5);
+}
+
+/* ========== 状态文字发光 - 告警状态 ========== */
+.status-error, .status-warning {
+    color: #ff5757;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(255, 87, 87, 0.5);
+}
+
+/* ========== 按钮悬浮发光效果 ========== */
+.btn-blue, .btn-add, .btn-primary {
+    padding: 8px 18px;
+    background: linear-gradient(135deg, #2d7cff 0%, #49a0ff 100%);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(73, 160, 255, 0.3);
+}
+
+.btn-blue:hover, .btn-add:hover, .btn-primary:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 0 20px rgba(73, 160, 255, 0.5);
+}
+
+/* ========== 危险按钮悬浮发光 ========== */
+.btn-delete, .btn-danger {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #dc3545 0%, #ef4444 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 0 5px rgba(220, 53, 69, 0.3);
+}
+
+.btn-delete:hover, .btn-danger:hover {
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.6);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* ========== 编辑按钮悬浮发光 ========== */
+.btn-edit {
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.3);
+}
+
+.btn-edit:hover {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* ========== 查看按钮悬浮发光 ========== */
+.btn-view {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 0 5px rgba(16, 185, 129, 0.3);
+}
+
+.btn-view:hover {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.6);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* ========== 下载按钮悬浮发光 ========== */
+.btn-download {
+    padding: 6px 14px;
+    background: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s;
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.3);
+}
+
+.btn-download:hover {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.6);
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* ========== 模态框样式 - 仅样式化内容区域，不定义遮罩层 ========== */
+.modal-content {
+    background: rgba(26, 26, 46, 0.95);
+    border-radius: 12px;
+    padding: 40px;
+    width: 400px;
+    max-width: 90%;
+    border: 1px solid rgba(60, 140, 255, 0.3);
+    box-shadow: 0 0 30px rgba(73, 160, 255, 0.2);
+}
+
+/* 兼容 .modal-overlay 遮罩层样式 */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+/* ========== 输入框聚焦发光 ========== */
+.search-bar input:focus,
+.search-bar select:focus,
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #49a0ff;
+    box-shadow: 0 0 10px rgba(73, 160, 255, 0.3);
+}
+
+/* ========== 侧边栏菜单悬浮效果 ========== */
+.menu li a {
+    position: relative;
+    overflow: hidden;
+}
+
+.menu li a::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(73, 160, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.menu li a:hover::after {
+    left: 100%;
+}
+
+/* ========== 分页样式 ========== */
+.pagination {
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pagination-info {
+    color: #a0aec0;
+    font-size: 13px;
+}
+
+.pagination-links {
+    display: flex;
+    gap: 4px;
+}
+
+.pagination-links a {
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: #a0aec0;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.3s ease;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pagination-links a:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.pagination-links a.active {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.4);
+}
+
+/* ========== 用户菜单样式 ========== */
+.sidebar .sidebar-footer .user-menu {
+    position: relative;
+}
+
+.sidebar .sidebar-footer .user-menu-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(102, 126, 234, 0.15);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 6px;
+    color: #667eea;
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.sidebar .sidebar-footer .user-menu-btn:hover {
+    background: rgba(102, 126, 234, 0.25);
+    border-color: rgba(102, 126, 234, 0.5);
+}
+
+.sidebar .sidebar-footer .user-menu-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.sidebar .sidebar-footer .user-menu-btn .username {
+    flex: 1;
+    text-align: left;
+    color: #fff;
+}
+
+.sidebar .sidebar-footer .user-menu-btn .user-menu-icon {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.3s ease;
+}
+
+.sidebar .sidebar-footer .user-menu-btn.open .user-menu-icon {
+    transform: rotate(180deg);
+}
+
+.sidebar .sidebar-footer .user-menu-dropdown {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    background: rgba(26, 26, 46, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    overflow: hidden;
+}
+
+.sidebar .sidebar-footer .user-menu-dropdown.show {
+    display: block;
+}
+
+.sidebar .sidebar-footer .user-menu-dropdown a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    color: #a0aec0;
+    text-decoration: none;
+    font-size: 13px;
+    transition: background 0.2s ease;
+}
+
+.sidebar .sidebar-footer .user-menu-dropdown a:hover {
+    background: rgba(102, 126, 234, 0.2);
+    color: #fff;
+}
+
+.sidebar .sidebar-footer .user-menu-dropdown a svg {
+    width: 14px;
+    height: 14px;
+}
+
+.sidebar .sidebar-footer .user-menu-dropdown hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+}
+
+/* ========== 操作系统徽章样式 ========== */
+.os-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 60px;
+}
+
+.os-badge.os-linux {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.os-badge.os-windows {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+/* ========== 移动端菜单按钮 ========== */
+.mobile-menu-btn {
+    display: none;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 1000;
+    width: 44px;
+    height: 44px;
+    background: rgba(102, 126, 234, 0.9);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-btn:hover {
+    background: rgba(102, 126, 234, 1);
+    transform: scale(1.05);
+}
+
+.mobile-menu-btn svg {
+    width: 24px;
+    height: 24px;
+    stroke: white;
+    stroke-width: 2;
+    fill: none;
+}
+
+.mobile-menu-btn.open {
+    background: rgba(239, 68, 68, 0.9);
+}
+
+/* ========== 移动端遮罩层 ========== */
+.mobile-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 5;
+}
+
+.mobile-overlay.show {
+    display: block;
+}
+
+/* ========== 响应式设计 - 移动端适配 ========== */
+@media screen and (max-width: 768px) {
+    /* 隐藏粒子背景和流光效果以提升性能 */
+    #particles-js,
+    .light-stream,
+    .bg-grid {
+        display: none !important;
+    }
+    
+    /* 移动端菜单按钮显示 */
+    .mobile-menu-btn {
+        display: block;
+    }
+    
+    /* 侧边栏移动端样式 */
+    .sidebar {
+        width: 280px !important;
+        left: -280px !important;
+        transform: translateX(0);
+        transition: left 0.3s ease, transform 0.3s ease;
+        z-index: 100 !important;
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        background: rgba(26, 26, 46, 0.98) !important;
+    }
+    
+    .sidebar.open {
+        left: 0 !important;
+        transform: translateX(0);
+    }
+    
+    /* 主内容区域移动端样式 */
+    .main-content {
+        margin-left: 0 !important;
+        padding: 70px 15px 20px 15px !important;
+        width: 100% !important;
+    }
+    
+    /* 页面标题区域 */
+    .header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .header h2 {
+        font-size: 20px;
+    }
+    
+    /* 搜索栏移动端样式 */
+    .search-bar {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .search-bar input,
+    .search-bar select {
+        flex: 1 1 calc(50% - 5px);
+        min-width: 0;
+    }
+    
+    .search-bar .btn {
+        flex: 1 1 auto;
+    }
+    
+    /* 表格移动端样式 */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .data-table {
+        min-width: 600px;
+    }
+    
+    .data-table th,
+    .data-table td {
+        padding: 10px 8px;
+        font-size: 13px;
+    }
+    
+    /* 弹窗移动端样式 */
+    .modal-overlay {
+        left: 0 !important;
+        padding: 10px;
+    }
+    
+    .modal-overlay .modal {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 90vh;
+        overflow-y: auto;
+        margin: 0;
+    }
+    
+    .modal-overlay .modal .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .modal-overlay .modal .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .modal-overlay .modal .form-actions .btn {
+        width: 100%;
+    }
+    
+    /* 表单卡片移动端样式 */
+    .form-card {
+        padding: 20px 15px;
+        margin: 0;
+    }
+    
+    .form-card .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .form-card .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-card .form-actions .btn {
+        width: 100%;
+    }
+    
+    /* 按钮移动端样式 */
+    .btn {
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+    
+    .btn-add {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* 分页移动端样式 */
+    .pagination {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .pagination-links a {
+        padding: 8px 12px;
+        min-width: 36px;
+    }
+    
+    /* 统计卡片移动端样式 */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .stat-card {
+        padding: 15px;
+    }
+    
+    /* 操作系统徽章 */
+    .os-badge {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+    
+    /* 用户菜单移动端样式 */
+    .sidebar .sidebar-footer {
+        padding: 15px;
+    }
+    
+    /* 登录页面移动端样式 */
+    .login-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 30px 20px !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        min-height: 100vh;
+    }
+}
+
+/* ========== 小屏幕手机适配 ========== */
+@media screen and (max-width: 480px) {
+    /* 搜索栏元素全宽 */
+    .search-bar input,
+    .search-bar select,
+    .search-bar .btn {
+        flex: 1 1 100%;
+    }
+    
+    /* 表格更紧凑 */
+    .data-table th,
+    .data-table td {
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+    
+    /* 按钮更小 */
+    .btn {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    /* 页面标题更小 */
+    .header h2 {
+        font-size: 18px;
+    }
+}
+
+/* ========== 横屏模式 ========== */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    .main-content {
+        padding-top: 60px !important;
+    }
+    
+    .modal-overlay .modal {
+        max-height: 95vh;
+    }
+}

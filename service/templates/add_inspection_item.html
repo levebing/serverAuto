@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器巡检系统 - 添加巡检项</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            display: flex;
+        }
+        .sidebar {
+            width: 280px;
+            background: rgba(26, 26, 46, 0.95);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 20px 0;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            overflow-y: auto;
+        }
+        .logo {
+            padding: 0 20px;
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            font-size: 18px;
+            color: #fff;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .logo h1 svg {
+            width: 24px;
+            height: 24px;
+        }
+        .menu {
+            list-style: none;
+            padding: 0 10px;
+        }
+        .menu li {
+            margin-bottom: 4px;
+        }
+        .menu li a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            color: #a0aec0;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+        .menu li a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            color: #fff;
+        }
+        .menu li a.active {
+            background: rgba(102, 126, 234, 0.3);
+            color: #fff;
+        }
+        .menu li a svg {
+            width: 18px;
+            height: 18px;
+        }
+        .menu li.has-submenu > a {
+            justify-content: space-between;
+        }
+        .menu li.has-submenu .submenu {
+            position: relative;
+            width: 100%;
+            background: rgba(26, 26, 46, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 0 0 6px 6px;
+            display: none;
+            list-style: none;
+            padding: 0;
+            margin-top: 4px;
+        }
+        .menu li.has-submenu .submenu li a {
+            padding-left: 45px;
+        }
+        .menu li.has-submenu.active .submenu {
+            display: block;
+        }
+        .submenu-icon {
+            font-size: 10px;
+            color: #a0aec0;
+            transition: transform 0.3s ease;
+        }
+        .menu li.has-submenu.active .submenu-icon {
+            transform: rotate(180deg);
+        }
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(26, 26, 46, 0.95);
+        }
+        .sidebar-footer .current-time {
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 13px;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .sidebar-footer .user-menu {
+            position: relative;
+        }
+        .sidebar-footer .user-menu-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            color: #667eea;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .sidebar-footer .user-menu-btn:hover {
+            background: rgba(102, 126, 234, 0.25);
+            border-color: rgba(102, 126, 234, 0.5);
+        }
+        .sidebar-footer .user-menu-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+        .sidebar-footer .user-menu-btn .username {
+            flex: 1;
+            text-align: left;
+            color: #fff;
+        }
+        .sidebar-footer .user-menu-btn .user-menu-icon {
+            width: 12px;
+            height: 12px;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-footer .user-menu-btn.open .user-menu-icon {
+            transform: rotate(180deg);
+        }
+        .sidebar-footer .user-menu-dropdown {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 0;
+            right: 0;
+            background: rgba(26, 26, 46, 0.98);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            overflow: hidden;
+        }
+        .sidebar-footer .user-menu-dropdown.show {
+            display: block;
+        }
+        .sidebar-footer .user-menu-dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            color: #a0aec0;
+            text-decoration: none;
+            font-size: 13px;
+            transition: background 0.2s ease;
+        }
+        .sidebar-footer .user-menu-dropdown a:hover {
+            background: rgba(102, 126, 234, 0.2);
+            color: #fff;
+        }
+        .sidebar-footer .user-menu-dropdown a svg {
+            width: 14px;
+            height: 14px;
+        }
+        .sidebar-footer .user-menu-dropdown hr {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 4px 0;
+        }
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 24px;
+            position: relative;
+            z-index: 5;
+        }
+        .header {
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h2 {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .form-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 30px;
+            max-width: 600px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            color: #a0aec0;
+            font-size: 13px;
+            margin-bottom: 8px;
+        }
+        .form-group label.required::after {
+            content: '*';
+            color: #ef4444;
+            margin-left: 4px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: #fff;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            font-family: inherit;
+        }
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #718096;
+        }
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .btn-primary {
+            background: rgba(102, 126, 234, 0.3);
+            border: 1px solid rgba(102, 126, 234, 0.5);
+            color: #667eea;
+        }
+        .btn-primary:hover {
+            background: rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #a0aec0;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+        .message.success {
+            background: rgba(0, 224, 154, 0.15);
+            border: 1px solid rgba(0, 224, 154, 0.3);
+            color: #00e09a;
+        }
+        .message.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div id="particles-js"></div>
+    <div class="bg-grid"></div>
+    <div class="light-stream"></div>
+    
+    {% include 'sidebar.html' %}
+    
+    <main class="main-content">
+        <div class="header">
+            <h2>{{ '编辑巡检项' if item else '添加巡检项' }}</h2>
+        </div>
+        
+        <div class="form-card">
+            {% if message %}
+            <div class="message {{ 'success' if success else 'error' }}">
+                {{ message }}
+            </div>
+            {% endif %}
+            
+            <form method="POST">
+                <input type="hidden" name="item_id" value="{{ item[0] if item else '' }}">
+                
+                <div class="form-group">
+                    <label for="item_name" class="required">巡检项名称</label>
+                    <input type="text" id="item_name" name="item_name" required placeholder="请输入巡检项名称" value="{{ item[1] if item else '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label for="item_command" class="required">执行命令</label>
+                    <textarea id="item_command" name="item_command" required placeholder="请输入要执行的命令（Linux用shell命令，Windows用PowerShell命令）">{{ item[2] if item else '' }}</textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label for="item_os_type">适用操作系统</label>
+                    <select id="item_os_type" name="item_os_type">
+                        <option value="linux" {{ 'selected' if (item[4] == 'linux' or not item) else '' }}>Linux</option>
+                        <option value="windows" {{ 'selected' if item and item[4] == 'windows' else '' }}>Windows</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="item_description">描述</label>
+                    <input type="text" id="item_description" name="item_description" placeholder="请输入描述（可选）" value="{{ item[3] if item else '' }}">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="goBack()">返回</button>
+                    <button type="submit" class="btn btn-primary">{{ '保存修改' if item else '添加巡检项' }}</button>
+                </div>
+            </form>
+        </div>
+    </main>
+    
+    <script src="/static/js/tech-effects.js"></script>
+    <script>
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html>

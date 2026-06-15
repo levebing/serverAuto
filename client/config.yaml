@@ -1,0 +1,43 @@
+# 服务器配置
+server:
+  # API 基础地址
+  api_base_url: "http://localhost:5001"
+  # 登录用户名
+  username: "admin"
+  # 登录密码
+  password: "admin"
+
+# 巡检配置
+inspection:
+  # 巡检频率（分钟）
+  interval_minutes: 60
+  # 是否启用自动巡检
+  enabled: true
+  # 是否在启动时立即执行一次巡检
+  run_on_start: true
+
+# 服务器信息（首次启动时推送）
+server_info:
+  # 服务器名称（如果为空，将自动获取主机名）
+  name: ""
+  # SSH端口
+  port: 22
+  # 用户名
+  ssh_username: "root"
+  # 密码（可选）
+  ssh_password: ""
+  # 分组ID
+  group_id: 1
+  # 备注
+  remark: "自动注册的客户端"
+  # 操作系统类型（linux/windows，为空自动检测）
+  os_type: ""
+
+# 日志配置
+log:
+  # 日志级别 (debug/info/warn/error)
+  level: "info"
+  # 是否输出到文件
+  output_file: false
+  # 日志文件路径
+  log_path: "./logs/"

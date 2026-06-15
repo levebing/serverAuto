@@ -20,12 +20,65 @@ app = Flask(__name__)
 CORS(app)
 app.secret_key = config.SECRET_KEY
 
+# API Token 存储（生产环境建议存储到数据库）
+api_tokens = {}
+
+def generate_token(username):
+    """生成 API Token"""
+    token = hashlib.sha256(f"{username}_{uuid.uuid4().hex}_{datetime.datetime.now().timestamp()}".encode()).hexdigest()
+    api_tokens[token] = {
+        'username': username,
+        'created_at': datetime.datetime.now(),
+        'expires_at': datetime.datetime.now() + datetime.timedelta(hours=24)
+    }
+    return token
+
+def validate_token(token):
+    """验证 API Token"""
+    if token not in api_tokens:
+        return None
+    
+    token_info = api_tokens[token]
+    if datetime.datetime.now() > token_info['expires_at']:
+        del api_tokens[token]
+        return None
+    
+    return token_info['username']
+
 def login_required(f):
-    """登录装饰器"""
+    """登录装饰器（支持 Session 和 Token 两种认证方式）"""
     def decorated_function(*args, **kwargs):
-        if 'username' not in session:
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
+        # 优先检查 Token 认证
+        token = request.headers.get('X-API-Token')
+        if token:
+            username = validate_token(token)
+            if username:
+                session['username'] = username
+                return f(*args, **kwargs)
+        
+        # 检查 Session 认证
+        if 'username' in session:
+            return f(*args, **kwargs)
+        
+        # 返回未授权
+        return jsonify({'success': False, 'message': '未授权访问，请先登录或提供有效的 API Token'}), 401
+    
+    decorated_function.__name__ = f.__name__
+    decorated_function.__doc__ = f.__doc__
+    return decorated_function
+
+def api_login_required(f):
+    """纯 API 登录装饰器（仅支持 Token 认证）"""
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('X-API-Token')
+        if token:
+            username = validate_token(token)
+            if username:
+                session['username'] = username
+                return f(*args, **kwargs)
+        
+        return jsonify({'success': False, 'message': '未授权访问，请提供有效的 API Token'}), 401
+    
     decorated_function.__name__ = f.__name__
     decorated_function.__doc__ = f.__doc__
     return decorated_function
@@ -130,11 +183,76 @@ def login():
             decrypted_password = decrypt_password(stored_password)
             if password == decrypted_password:
                 session['username'] = username
-                return jsonify({'success': True})
+                
+                # 生成 API Token
+                token = generate_token(username)
+                
+                return jsonify({
+                    'success': True,
+                    'username': username,
+                    'token': token,
+                    'token_expires_in': 86400  # 24小时（秒）
+                })
         
         return jsonify({'success': False, 'message': '用户名或密码错误'})
     
     return render_template('login.html')
+
+@app.route('/api/get_token', methods=['POST'])
+def api_get_token():
+    """获取 API Token（纯接口调用方式）"""
+    # 支持从多个位置获取参数
+    data = request.get_json() if request.is_json else {}
+    
+    # 从 JSON Body 获取
+    username = data.get('username')
+    password = data.get('password')
+    
+    # 如果 JSON Body 没有，从 Form Data 获取
+    if not username:
+        username = request.form.get('username')
+    if not password:
+        password = request.form.get('password')
+    
+    # 如果还没有，从 Query 参数获取
+    if not username:
+        username = request.args.get('username')
+    if not password:
+        password = request.args.get('password')
+    
+    if not username or not password:
+        return jsonify({'success': False, 'message': '用户名和密码不能为空'}), 400
+    
+    user = get_user_by_username(username)
+    if user:
+        stored_password = user[2]
+        decrypted_password = decrypt_password(stored_password)
+        if password == decrypted_password:
+            token = generate_token(username)
+            return jsonify({
+                'success': True,
+                'token': token,
+                'expires_in': 86400,  # 24小时
+                'expires_at': (datetime.datetime.now() + datetime.timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
+            })
+    
+    return jsonify({'success': False, 'message': '用户名或密码错误'})
+
+@app.route('/api/refresh_token', methods=['POST'])
+@api_login_required
+def api_refresh_token():
+    """刷新 API Token"""
+    username = session.get('username')
+    if username:
+        token = generate_token(username)
+        return jsonify({
+            'success': True,
+            'token': token,
+            'expires_in': 86400,
+            'expires_at': (datetime.datetime.now() + datetime.timedelta(hours=24)).strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    return jsonify({'success': False, 'message': '刷新失败'})
 
 @app.route('/logout')
 def logout():

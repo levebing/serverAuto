@@ -1,8 +1,9 @@
 import paramiko
 import tempfile
 import os
+import time
 from datetime import datetime, timedelta
-from config import MAX_ALERT_THRESHOLD
+from config import MAX_ALERT_THRESHOLD, SSH_CONFIG
 from database import get_all_inspection_items
 
 class ServerInspector:
@@ -16,75 +17,165 @@ class ServerInspector:
         self.temp_key_path = None
         self.last_error = ""
     
-    def connect(self):
+    def check_ssh_service(self):
+        """检查SSH服务是否可用"""
         try:
-            self.ssh = paramiko.SSHClient()
-            self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            
-            if self.private_key_content:
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False) as f:
-                    f.write(self.private_key_content.decode('utf-8') if isinstance(self.private_key_content, bytes) else self.private_key_content)
-                    self.temp_key_path = f.name
-                
-                try:
-                    private_key = paramiko.RSAKey.from_private_key_file(self.temp_key_path)
-                except Exception as rsa_error:
-                    try:
-                        private_key = paramiko.DSSKey.from_private_key_file(self.temp_key_path)
-                    except Exception as dss_error:
-                        try:
-                            private_key = paramiko.ECDSAKey.from_private_key_file(self.temp_key_path)
-                        except Exception as ecdsa_error:
-                            try:
-                                private_key = paramiko.Ed25519Key.from_private_key_file(self.temp_key_path)
-                            except Exception as ed_error:
-                                self.last_error = f"密钥文件解析失败: RSA={str(rsa_error)}, DSS={str(dss_error)}, ECDSA={str(ecdsa_error)}, Ed25519={str(ed_error)}"
-                                return False
-                
-                try:
-                    self.ssh.connect(self.ip, port=self.port, username=self.username, pkey=private_key, timeout=10, banner_timeout=10)
-                except paramiko.AuthenticationException:
-                    self.last_error = "SSH认证失败：用户名或密钥不正确"
-                    return False
-                except paramiko.SSHException as e:
-                    self.last_error = f"SSH连接异常: {str(e)}"
-                    return False
-                except ConnectionRefusedError:
-                    self.last_error = f"连接被拒绝：服务器 {self.ip}:{self.port} 未开启SSH服务或端口不正确"
-                    return False
-                except TimeoutError:
-                    self.last_error = f"连接超时：无法连接到 {self.ip}:{self.port}，请检查网络和防火墙"
-                    return False
-                except Exception as e:
-                    self.last_error = f"秘钥登录失败: {str(e)}"
-                    return False
-            else:
-                if not self.password:
-                    self.last_error = "未配置密码或秘钥文件"
-                    return False
-                
-                try:
-                    self.ssh.connect(self.ip, port=self.port, username=self.username, password=self.password, timeout=10, banner_timeout=10)
-                except paramiko.AuthenticationException:
-                    self.last_error = "SSH认证失败：用户名或密码不正确"
-                    return False
-                except paramiko.SSHException as e:
-                    self.last_error = f"SSH连接异常: {str(e)}"
-                    return False
-                except ConnectionRefusedError:
-                    self.last_error = f"连接被拒绝：服务器 {self.ip}:{self.port} 未开启SSH服务或端口不正确"
-                    return False
-                except TimeoutError:
-                    self.last_error = f"连接超时：无法连接到 {self.ip}:{self.port}，请检查网络和防火墙"
-                    return False
-                except Exception as e:
-                    self.last_error = f"密码登录失败: {str(e)}"
-                    return False
-            
-            return True
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(SSH_CONFIG['connection_timeout'])
+            result = sock.connect_ex((self.ip, self.port))
+            sock.close()
+            return result == 0
         except Exception as e:
-            self.last_error = f"连接失败: {str(e)}"
+            self.last_error = f"SSH服务检查失败: {str(e)}"
             return False
+
+    def check_network_connectivity(self):
+        """检查基础网络连通性"""
+        try:
+            import socket
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(3)
+            result = sock.connect_ex((self.ip, 22))
+            sock.close()
+            return result == 0
+        except Exception as e:
+            return False
+
+    def connect(self, max_retries=None):
+        """连接服务器，支持重试机制"""
+        max_retries = max_retries or SSH_CONFIG['max_retries']
+        
+        # 首先检查SSH服务是否可用
+        if SSH_CONFIG['enable_pre_check']:
+            if not self.check_ssh_service():
+                self.last_error = f"SSH服务不可用：无法连接到 {self.ip}:{self.port}，请检查SSH服务是否启动"
+                return False
+            
+            # 检查网络连通性
+            if not self.check_network_connectivity():
+                self.last_error = f"网络不可达：无法连接到 {self.ip}，请检查网络连接"
+                return False
+        
+        for attempt in range(max_retries + 1):
+            try:
+                self.ssh = paramiko.SSHClient()
+                self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                
+                if self.private_key_content:
+                    with tempfile.NamedTemporaryFile(mode='w', suffix='.pem', delete=False) as f:
+                        f.write(self.private_key_content.decode('utf-8') if isinstance(self.private_key_content, bytes) else self.private_key_content)
+                        self.temp_key_path = f.name
+                    
+                    try:
+                        private_key = paramiko.RSAKey.from_private_key_file(self.temp_key_path)
+                    except Exception as rsa_error:
+                        try:
+                            private_key = paramiko.DSSKey.from_private_key_file(self.temp_key_path)
+                        except Exception as dss_error:
+                            try:
+                                private_key = paramiko.ECDSAKey.from_private_key_file(self.temp_key_path)
+                            except Exception as ecdsa_error:
+                                try:
+                                    private_key = paramiko.Ed25519Key.from_private_key_file(self.temp_key_path)
+                                except Exception as ed_error:
+                                    self.last_error = f"密钥文件解析失败: RSA={str(rsa_error)}, DSS={str(dss_error)}, ECDSA={str(ecdsa_error)}, Ed25519={str(ed_error)}"
+                                    return False
+                    
+                    try:
+                        self.ssh.connect(self.ip, port=self.port, username=self.username, pkey=private_key, 
+                                      timeout=SSH_CONFIG['connection_timeout'], 
+                                      banner_timeout=SSH_CONFIG['banner_timeout'])
+                    except paramiko.AuthenticationException:
+                        self.last_error = "SSH认证失败：用户名或密钥不正确"
+                        return False
+                    except paramiko.SSHException as e:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"SSH连接异常: {str(e)}"
+                        return False
+                    except ConnectionRefusedError:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"连接被拒绝：服务器 {self.ip}:{self.port} 未开启SSH服务或端口不正确"
+                        return False
+                    except TimeoutError:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"连接超时：无法连接到 {self.ip}:{self.port}，请检查网络和防火墙"
+                        return False
+                    except Exception as e:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"秘钥登录失败: {str(e)}"
+                        return False
+                else:
+                    if not self.password:
+                        self.last_error = "未配置密码或秘钥文件"
+                        return False
+                    
+                    try:
+                        self.ssh.connect(self.ip, port=self.port, username=self.username, password=self.password, 
+                                      timeout=SSH_CONFIG['connection_timeout'], 
+                                      banner_timeout=SSH_CONFIG['banner_timeout'])
+                    except paramiko.AuthenticationException:
+                        self.last_error = "SSH认证失败：用户名或密码不正确"
+                        return False
+                    except paramiko.SSHException as e:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"SSH连接异常: {str(e)}"
+                        return False
+                    except ConnectionRefusedError:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"连接被拒绝：服务器 {self.ip}:{self.port} 未开启SSH服务或端口不正确"
+                        return False
+                    except TimeoutError:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"连接超时：无法连接到 {self.ip}:{self.port}，请检查网络和防火墙"
+                        return False
+                    except Exception as e:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = f"密码登录失败: {str(e)}"
+                        return False
+                
+                # 连接成功，进行简单的命令测试
+                if SSH_CONFIG['enable_connection_test']:
+                    test_result = self.execute_command('echo "connection_test"')
+                    if test_result and "connection_test" in test_result:
+                        return True
+                    else:
+                        if attempt < max_retries:
+                            time.sleep(SSH_CONFIG['retry_delay'])
+                            continue
+                        self.last_error = "SSH连接测试失败，连接可能不稳定"
+                        return False
+                else:
+                    return True
+                    
+            except Exception as e:
+                if attempt < max_retries:
+                    time.sleep(SSH_CONFIG['retry_delay'])
+                    continue
+                self.last_error = f"连接失败: {str(e)}"
+                return False
+            finally:
+                if attempt < max_retries and self.ssh:
+                    self.ssh.close()
+                    self.ssh = None
+        
+        return False
     
     def disconnect(self):
         if self.ssh:

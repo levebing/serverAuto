@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>服务器巡检系统 - 处置故障</title>
+    <link rel="stylesheet" href="/static/css/tech-effects.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            position: relative;
+            overflow-x: hidden;
+            color: #fff;
+            background: linear-gradient(135deg, #050d29 0%, #0a1742 50%, #0f1e4d 100%);
+        }
+
+        /* 禁用原有背景动画 */
+        .bg-animation,
+        .bg-glow-1,
+        .bg-glow-2,
+        .bg-glow-3,
+        .snow-container,
+        .wind-gust {
+            display: none !important;
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 24px;
+            position: relative;
+            z-index: 5;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .header h2 {
+            color: #fff;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .btn-add:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        .btn-warning:hover {
+            background: rgba(255, 193, 7, 0.3);
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 20px;
+            background: rgba(26, 26, 46, 0.8);
+            border-radius: 10px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .search-bar .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .search-bar label {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+
+        .search-bar select,
+        .search-bar input {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 13px;
+            min-width: 160px;
+            transition: border-color 0.3s ease;
+            appearance: none;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .search-bar select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
+        }
+
+        .search-bar select option {
+            background: rgba(26, 26, 46, 0.95);
+            color: #fff;
+            padding: 8px 12px;
+        }
+
+        .search-bar select:focus,
+        .search-bar input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .search-bar button {
+            padding: 10px 20px;
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 6px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-top: 18px;
+        }
+
+        .search-bar button:hover {
+            background: rgba(102, 126, 234, 0.3);
+        }
+
+        .table-container {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            background: rgba(102, 126, 234, 0.2);
+            padding: 14px 16px;
+            text-align: left;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            color: #a0aec0;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .data-table tr:hover td {
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.pending {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .status-badge.processing {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+
+        .status-badge.completed {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .status-badge.review-pending {
+            background: rgba(108, 117, 125, 0.2);
+            color: #6c757d;
+        }
+
+        .status-badge.reviewed {
+            background: rgba(13, 110, 253, 0.2);
+            color: #0d6efd;
+        }
+
+        .fault-level {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .fault-level.critical {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .fault-level.major {
+            background: rgba(255, 152, 0, 0.2);
+            color: #ff9800;
+        }
+
+        .fault-level.minor {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 6px;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn.edit {
+            background: rgba(13, 110, 253, 0.2);
+            color: #0d6efd;
+        }
+
+        .action-btn.edit:hover {
+            background: rgba(13, 110, 253, 0.3);
+        }
+
+        .action-btn.delete {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .action-btn.delete:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+
+        .action-btn.download {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .action-btn.download:hover {
+            background: rgba(40, 167, 69, 0.3);
+        }
+
+        .action-btn.review {
+            background: rgba(102, 16, 242, 0.2);
+            color: #6610f2;
+        }
+
+        .action-btn.review:hover {
+            background: rgba(102, 16, 242, 0.3);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 280px;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: rgba(26, 26, 46, 0.95);
+            border-radius: 10px;
+            padding: 24px;
+            width: 650px;
+            max-width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #fff;
+            font-size: 17px;
+            font-weight: 600;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .modal-close:hover {
+            color: #fff;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            color: #a0aec0;
+            font-weight: 500;
+        }
+
+        .form-group label.required::after {
+            content: ' *';
+            color: #dc3545;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 10px 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 13px;
+            transition: border-color 0.3s ease;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .form-group select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a0aec0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            padding-right: 30px;
+        }
+
+        .form-group select option {
+            background: rgba(26, 26, 46, 0.95);
+            color: #fff;
+            padding: 8px 12px;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .modal-message {
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+
+        .modal-message.success {
+            background: rgba(40, 167, 69, 0.2);
+            color: #28a745;
+        }
+
+        .modal-message.error {
+            background: rgba(220, 53, 69, 0.2);
+            color: #dc3545;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            margin: 20px 0 12px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <div id="particles-js"></div>
+    
+    <!-- 侧边栏 -->
+    {% include 'sidebar.html' %}
+    
+    <!-- 主内容区 -->
+    <main class="main-content">
+        <div class="header">
+            <h2>处置故障</h2>
+            <button class="btn btn-add" onclick="showAddModal()">+ 新增</button>
+        </div>
+        
+        <!-- 搜索条件 -->
+        <div class="search-bar">
+            <div class="form-group">
+                <label for="searchGroup">分组</label>
+                <select id="searchGroup">
+                    <option value="0">全部分组</option>
+                    {% for group in groups %}
+                    <option value="{{ group[0] }}">{{ group[1] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="searchFaultType">故障类型</label>
+                <select id="searchFaultType">
+                    <option value="">全部类型</option>
+                    <option value="系统故障">系统故障</option>
+                    <option value="网络故障">网络故障</option>
+                    <option value="应用故障">应用故障</option>
+                    <option value="硬件故障">硬件故障</option>
+                    <option value="安全事件">安全事件</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="searchFaultLevel">故障级别</label>
+                <select id="searchFaultLevel">
+                    <option value="">全部级别</option>
+                    <option value="严重">严重</option>
+                    <option value="重要">重要</option>
+                    <option value="一般">一般</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="startTime">开始时间</label>
+                <input type="datetime-local" id="startTime">
+            </div>
+            <div class="form-group">
+                <label for="endTime">结束时间</label>
+                <input type="datetime-local" id="endTime">
+            </div>
+            <div class="form-group">
+                <label for="keyword">关键字</label>
+                <input type="text" id="keyword" placeholder="分组名称、事件名称">
+            </div>
+            <button id="searchBtn" type="button">搜索</button>
+        </div>
+        
+        <!-- 列表 -->
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>序号</th>
+                        <th>分组</th>
+                        <th>事件名称</th>
+                        <th>故障级别</th>
+                        <th>故障类型</th>
+                        <th>发生时间</th>
+                        <th>发现人</th>
+                        <th>处理状态</th>
+                        <th>审核状态</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for fault in faults %}
+                    <tr>
+                        <td>{{ loop.index + (page - 1) * per_page }}</td>
+                        <td>{{ fault[2] }}</td>
+                        <td>{{ fault[3] }}</td>
+                        <td>
+                            <span class="fault-level {{ 'critical' if fault[4] == '严重' else 'major' if fault[4] == '重要' else 'minor' }}">
+                                {{ fault[4] }}
+                            </span>
+                        </td>
+                        <td>{{ fault[5] }}</td>
+                        <td>{{ fault[7] }}</td>
+                        <td>{{ fault[8] }}</td>
+                        <td>
+                            <span class="status-badge {{ 'pending' if fault[9] == '待处理' else 'processing' if fault[9] == '处理中' else 'completed' }}">
+                                {{ fault[9] }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ 'review-pending' if fault[13] == '待审核' else 'reviewed' }}">
+                                {{ fault[13] }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="action-btns">
+                                <button class="action-btn edit" onclick="showEditModal({{ fault[0] }})">编辑</button>
+                                <button class="action-btn delete" onclick="deleteFault({{ fault[0] }})">删除</button>
+                                {% if fault[17] %}
+                                <button class="action-btn download" onclick="downloadReport('{{ fault[17] }}')">报告下载</button>
+                                {% endif %}
+                                {% if fault[13] == '待审核' %}
+                                <button class="action-btn review" onclick="showReviewModal({{ fault[0] }})">审核</button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not faults %}
+                    <tr>
+                        <td colspan="10" style="text-align: center; color: #6c757d;">暂无数据</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- 分页 -->
+        <div class="pagination">
+            <div class="pagination-info">共 {{ total }} 条记录</div>
+            {% if total > per_page %}
+            {% set total_pages = (total + per_page - 1) // per_page %}
+            <div class="pagination-links">
+                {% if page > 1 %}
+                <a href="?page={{ page-1 }}{% if group_id %}&group_id={{ group_id }}{% endif %}{% if fault_type %}&fault_type={{ fault_type }}{% endif %}{% if fault_level %}&fault_level={{ fault_level }}{% endif %}{% if start_time %}&start_time={{ start_time }}{% endif %}{% if end_time %}&end_time={{ end_time }}{% endif %}{% if keyword %}&keyword={{ keyword }}{% endif %}">上一页</a>
+                {% endif %}
+                {% for p in range(1, total_pages+1) %}
+                <a href="?page={{ p }}{% if group_id %}&group_id={{ group_id }}{% endif %}{% if fault_type %}&fault_type={{ fault_type }}{% endif %}{% if fault_level %}&fault_level={{ fault_level }}{% endif %}{% if start_time %}&start_time={{ start_time }}{% endif %}{% if end_time %}&end_time={{ end_time }}{% endif %}{% if keyword %}&keyword={{ keyword }}{% endif %}" {% if p == page %}class="active"{% endif %}>{{ p }}</a>
+                {% endfor %}
+                {% if page < total_pages %}
+                <a href="?page={{ page+1 }}{% if group_id %}&group_id={{ group_id }}{% endif %}{% if fault_type %}&fault_type={{ fault_type }}{% endif %}{% if fault_level %}&fault_level={{ fault_level }}{% endif %}{% if start_time %}&start_time={{ start_time }}{% endif %}{% if end_time %}&end_time={{ end_time }}{% endif %}{% if keyword %}&keyword={{ keyword }}{% endif %}">下一页</a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </main>
+    
+    <!-- 添加/编辑弹窗 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增故障处置记录</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalMessage"></div>
+            <form id="faultForm">
+                <input type="hidden" id="faultId">
+                
+                <!-- 基本信息 -->
+                <div class="section-title">基本信息</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="faultGroup" class="required">分组</label>
+                        <select id="faultGroup" required>
+                            <option value="">请选择分组</option>
+                            {% for group in groups %}
+                            <option value="{{ group[0] }}">{{ group[1] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="faultLevel" class="required">故障级别</label>
+                        <select id="faultLevel" required>
+                            <option value="">请选择级别</option>
+                            <option value="严重">严重</option>
+                            <option value="重要">重要</option>
+                            <option value="一般">一般</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="eventName" class="required">事件名称</label>
+                        <input type="text" id="eventName" required placeholder="请输入事件名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="faultType" class="required">故障类型</label>
+                        <select id="faultType" required>
+                            <option value="">请选择类型</option>
+                            <option value="系统故障">系统故障</option>
+                            <option value="网络故障">网络故障</option>
+                            <option value="应用故障">应用故障</option>
+                            <option value="硬件故障">硬件故障</option>
+                            <option value="安全事件">安全事件</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="faultDescription" class="required">故障描述</label>
+                    <textarea id="faultDescription" required placeholder="请详细描述故障情况"></textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="occurrenceTime" class="required">发生时间</label>
+                        <input type="datetime-local" id="occurrenceTime" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="discoverer" class="required">发现人</label>
+                        <input type="text" id="discoverer" required placeholder="请输入发现人姓名">
+                    </div>
+                </div>
+                
+                <!-- 处理信息 -->
+                <div class="section-title">处理信息</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="processingStatus">处理状态</label>
+                        <select id="processingStatus">
+                            <option value="待处理">待处理</option>
+                            <option value="处理中">处理中</option>
+                            <option value="已完成">已完成</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="processingPerson">处理人</label>
+                        <input type="text" id="processingPerson" placeholder="请输入处理人姓名">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="processingTime">处理时间</label>
+                        <input type="datetime-local" id="processingTime">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="processingDescription">处理描述</label>
+                    <textarea id="processingDescription" placeholder="请详细描述处理过程和结果"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning" onclick="closeModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 审核弹窗 -->
+    <div class="modal-overlay" id="reviewModalOverlay">
+        <div class="modal" style="width: 480px;">
+            <div class="modal-header">
+                <h3>审核故障处置</h3>
+                <button class="modal-close" onclick="closeReviewModal()">&times;</button>
+            </div>
+            <div id="reviewMessage"></div>
+            <form id="reviewForm">
+                <input type="hidden" id="reviewFaultId">
+                
+                <div class="form-group">
+                    <label for="reviewPerson" class="required">审核人员</label>
+                    <input type="text" id="reviewPerson" required placeholder="请输入审核人员姓名">
+                </div>
+                
+                <div class="form-group">
+                    <label for="reviewComment" class="required">审核意见</label>
+                    <textarea id="reviewComment" required placeholder="请输入审核意见"></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-warning" onclick="closeReviewModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">提交审核</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="/static/js/tech-effects.js"></script>
+    <script>
+        // 页面加载时初始化搜索条件
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            
+            // 设置搜索条件的值
+            const groupId = params.get('group_id');
+            const faultType = params.get('fault_type');
+            const faultLevel = params.get('fault_level');
+            const startTime = params.get('start_time');
+            const endTime = params.get('end_time');
+            const keyword = params.get('keyword');
+            
+            if (groupId) document.getElementById('searchGroup').value = groupId;
+            if (faultType) document.getElementById('searchFaultType').value = decodeURIComponent(faultType);
+            if (faultLevel) document.getElementById('searchFaultLevel').value = decodeURIComponent(faultLevel);
+            if (startTime) document.getElementById('startTime').value = startTime;
+            if (endTime) document.getElementById('endTime').value = endTime;
+            if (keyword) document.getElementById('keyword').value = decodeURIComponent(keyword);
+            
+            // 确保弹窗在页面加载时是关闭状态
+            document.getElementById('modalOverlay').style.display = 'none';
+            document.getElementById('reviewModalOverlay').style.display = 'none';
+            
+            // 为搜索按钮添加事件监听器（使用click事件，可靠触发）
+            const searchBtn = document.getElementById('searchBtn');
+            if (searchBtn) {
+                searchBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    searchFaults();
+                });
+                
+                // 添加键盘事件支持
+                searchBtn.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        searchFaults();
+                    }
+                });
+            }
+        });
+        
+        function searchFaults() {
+            try {
+                const groupId = document.getElementById('searchGroup').value;
+                const faultType = document.getElementById('searchFaultType').value;
+                const faultLevel = document.getElementById('searchFaultLevel').value;
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
+                const keyword = document.getElementById('keyword').value;
+                
+                let url = `/faults?page=1`;
+                if (groupId && groupId != '0') url += `&group_id=${groupId}`;
+                if (faultType) url += `&fault_type=${encodeURIComponent(faultType)}`;
+                if (faultLevel) url += `&fault_level=${encodeURIComponent(faultLevel)}`;
+                if (startTime) url += `&start_time=${startTime}`;
+                if (endTime) url += `&end_time=${endTime}`;
+                if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
+                
+                console.log('搜索URL:', url);
+                window.location.href = url;
+            } catch (error) {
+                console.error('搜索出错:', error);
+                alert('搜索失败，请刷新页面重试');
+            }
+        }
+        
+        function changePage(page) {
+            const params = new URLSearchParams(window.location.search);
+            params.set('page', page);
+            window.location.href = `/faults?${params.toString()}`;
+        }
+        
+        function showAddModal() {
+            document.getElementById('modalTitle').textContent = '新增故障处置记录';
+            document.getElementById('faultId').value = '';
+            document.getElementById('faultGroup').value = '';
+            document.getElementById('eventName').value = '';
+            document.getElementById('faultLevel').value = '';
+            document.getElementById('faultType').value = '';
+            document.getElementById('faultDescription').value = '';
+            document.getElementById('occurrenceTime').value = '';
+            document.getElementById('discoverer').value = '';
+            document.getElementById('processingStatus').value = '待处理';
+            document.getElementById('processingPerson').value = '';
+            document.getElementById('processingTime').value = '';
+            document.getElementById('processingDescription').value = '';
+            document.getElementById('modalMessage').innerHTML = '';
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+        
+        function showEditModal(faultId) {
+            fetch(`/api/get_fault/${faultId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const fault = data.data;
+                        document.getElementById('modalTitle').textContent = '编辑故障处置记录';
+                        document.getElementById('faultId').value = fault[0];
+                        document.getElementById('faultGroup').value = fault[1] || '';
+                        document.getElementById('eventName').value = fault[3] || '';
+                        document.getElementById('faultLevel').value = fault[4] || '';
+                        document.getElementById('faultType').value = fault[5] || '';
+                        document.getElementById('faultDescription').value = fault[6] || '';
+                        document.getElementById('occurrenceTime').value = fault[7] ? formatDateTime(fault[7]) : '';
+                        document.getElementById('discoverer').value = fault[8] || '';
+                        document.getElementById('processingStatus').value = fault[9] || '待处理';
+                        document.getElementById('processingPerson').value = fault[10] || '';
+                        document.getElementById('processingTime').value = fault[11] ? formatDateTime(fault[11]) : '';
+                        document.getElementById('processingDescription').value = fault[12] || '';
+                        document.getElementById('modalMessage').innerHTML = '';
+                        document.getElementById('modalOverlay').style.display = 'flex';
+                    }
+                });
+        }
+        
+        function formatDateTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toISOString().slice(0, 16);
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').style.display = 'none';
+        }
+        
+        function closeReviewModal() {
+            document.getElementById('reviewModalOverlay').style.display = 'none';
+        }
+        
+        document.getElementById('faultForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const faultId = document.getElementById('faultId').value;
+            const groupId = document.getElementById('faultGroup').value;
+            const groupName = document.querySelector('#faultGroup option:checked').text;
+            const eventName = document.getElementById('eventName').value;
+            const faultLevel = document.getElementById('faultLevel').value;
+            const faultType = document.getElementById('faultType').value;
+            const faultDescription = document.getElementById('faultDescription').value;
+            const occurrenceTime = document.getElementById('occurrenceTime').value;
+            const discoverer = document.getElementById('discoverer').value;
+            const processingStatus = document.getElementById('processingStatus').value;
+            const processingPerson = document.getElementById('processingPerson').value;
+            const processingTime = document.getElementById('processingTime').value;
+            const processingDescription = document.getElementById('processingDescription').value;
+            
+            const url = faultId ? '/api/update_fault' : '/api/add_fault';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: faultId,
+                    group_id: groupId,
+                    group_name: groupName,
+                    event_name: eventName,
+                    fault_level: faultLevel,
+                    fault_type: faultType,
+                    fault_description: faultDescription,
+                    occurrence_time: occurrenceTime,
+                    discoverer: discoverer,
+                    processing_status: processingStatus,
+                    processing_person: processingPerson,
+                    processing_time: processingTime,
+                    processing_description: processingDescription
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('modalMessage').innerHTML = '<div class="modal-message success">保存成功！</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    document.getElementById('modalMessage').innerHTML = `<div class="modal-message error">${data.message || '保存失败'}</div>`;
+                }
+            });
+        });
+        
+        function deleteFault(faultId) {
+            if (confirm('确定要删除这条故障处置记录吗？')) {
+                fetch(`/api/delete_fault/${faultId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            window.location.reload();
+                        } else {
+                            alert('删除失败');
+                        }
+                    });
+            }
+        }
+        
+        function downloadReport(reportPath) {
+            window.open(`/${encodeURIComponent(reportPath)}`, '_blank');
+        }
+        
+        function showReviewModal(faultId) {
+            document.getElementById('reviewFaultId').value = faultId;
+            document.getElementById('reviewPerson').value = '';
+            document.getElementById('reviewComment').value = '';
+            document.getElementById('reviewMessage').innerHTML = '';
+            document.getElementById('reviewModalOverlay').style.display = 'flex';
+        }
+        
+        document.getElementById('reviewForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const faultId = document.getElementById('reviewFaultId').value;
+            const reviewPerson = document.getElementById('reviewPerson').value;
+            const reviewComment = document.getElementById('reviewComment').value;
+            
+            fetch('/api/review_fault', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fault_id: faultId,
+                    review_person: reviewPerson,
+                    review_comment: reviewComment
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('reviewMessage').innerHTML = '<div class="modal-message success">审核成功！</div>';
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    document.getElementById('reviewMessage').innerHTML = `<div class="modal-message error">${data.message || '审核失败'}</div>`;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
